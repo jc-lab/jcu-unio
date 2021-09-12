@@ -1,0 +1,31 @@
+add_library(jcu_unio
+        STATIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc/jcu-unio/log.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc/jcu-unio/loop.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc/jcu-unio/uv_helper.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc/jcu-unio/buffer.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc/jcu-unio/event.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc/jcu-unio/emitter.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc/jcu-unio/net/socket.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc/jcu-unio/net/stream_socket.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc/jcu-unio/net/tcp_socket.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/log.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/log.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/loop.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/handle.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/event.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/buffer.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/net/socket.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/net/stream_socket.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/net/tcp_socket.cc
+        )
+target_include_directories(
+        jcu_unio
+        PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+)
+target_link_libraries(
+        jcu_unio
+        PUBLIC
+        uv_a
+)
