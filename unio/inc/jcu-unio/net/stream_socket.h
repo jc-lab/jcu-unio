@@ -18,11 +18,12 @@ namespace unio {
 
 class SocketConnectEvent : public BaseEvent {
  protected:
-  UvErrorEvent error_;
+  std::shared_ptr<ErrorEvent> error_;
 
  public:
   SocketConnectEvent();
   SocketConnectEvent(UvErrorEvent error);
+  SocketConnectEvent(std::shared_ptr<ErrorEvent> error);
   bool hasError() const override;
   ErrorEvent &error() override;
   const ErrorEvent &error() const override;
@@ -40,19 +41,22 @@ class SocketDisconnectEvent : public BaseEvent {
   const ErrorEvent &error() const override;
 };
 
-template <class T>
-class StreamSocket : public Socket<T> {
+class StreamSocket : public Socket {
  public:
   virtual void connect(
       std::shared_ptr<ConnectParam> connect_param,
-      CompletionOnceCallback<void(SocketConnectEvent& event, T& handle)> callback
+      CompletionOnceCallback<SocketConnectEvent> callback
   ) = 0;
 
   virtual void disconnect(
-      CompletionOnceCallback<void(SocketDisconnectEvent& event, T& handle)> callback
+      CompletionOnceCallback<SocketDisconnectEvent> callback
   ) = 0;
 
   virtual bool isConnected() const = 0;
+
+  virtual bool isHandshaked() const {
+    return isConnected();
+  }
 };
 
 } // namespace unio

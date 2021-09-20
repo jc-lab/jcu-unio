@@ -8,19 +8,19 @@
 // 52.43.121.77
 using namespace ::jcu::unio;
 
-class EchoClient {
+class SimpleHttpsClient {
  private:
   std::shared_ptr<Loop> loop_;
   std::shared_ptr<Logger> log_;
 
-  std::weak_ptr<EchoClient> self_;
+  std::weak_ptr<SimpleHttpsClient> self_;
   std::shared_ptr<TCPSocket> socket_;
   std::shared_ptr<Buffer> read_buf_;
   std::shared_ptr<Buffer> write_buf_;
 
   bool is_first_send_;
 
-  EchoClient(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> log) :
+  SimpleHttpsClient(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> log) :
       loop_(std::move(loop)), log_(std::move(log)), is_first_send_(false)
   {
     log_->logf(jcu::unio::Logger::kLogTrace, "EchoClient: construct");
@@ -40,26 +40,28 @@ class EchoClient {
   }
 
  public:
-  ~EchoClient() {
+  ~SimpleHttpsClient() {
     log_->logf(jcu::unio::Logger::kLogTrace, "EchoClient: destruct");
   }
 
-  static std::shared_ptr<EchoClient> create(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> log) {
-    std::shared_ptr<EchoClient> instance(new EchoClient(std::move(loop), std::move(log)));
+  static std::shared_ptr<SimpleHttpsClient> create(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> log) {
+    std::shared_ptr<SimpleHttpsClient> instance(new SimpleHttpsClient(std::move(loop), std::move(log)));
     instance->self_ = instance;
     instance->init();
     return instance;
   }
 
   void connect(std::shared_ptr<ConnectParam> connect_param) {
-    std::shared_ptr<EchoClient> self(self_.lock());
-    socket_->connect(connect_param, [self](SocketConnectEvent& event, TCPSocket& handle) -> void {
+    std::shared_ptr<SimpleHttpsClient> self(self_.lock());
+    socket_->connect(connect_param, [self](SocketConnectEvent& event, Resource& resource) -> void {
+      auto& handle = dynamic_cast<TCPSocket&>(resource);
       printf("CONNECTED %d %s // %d\n", event.error().code(), event.error().what(), handle.isConnected());
       if (event.hasError()) {
         handle.close();
         return ;
       }
-      handle.read(self->read_buf_, [self](SocketReadEvent& event, TCPSocket& handle) -> void {
+      handle.read(self->read_buf_, [self](SocketReadEvent& event, Resource& resource) -> void {
+        auto& handle = dynamic_cast<TCPSocket&>(resource);
         if (event.hasError()) {
           auto& error = event.error();
           printf("READ ERR: %d %s\n", error.code(), error.what());
@@ -76,7 +78,7 @@ class EchoClient {
             memcpy(self->write_buf_->data(), write_data.c_str(), write_data.size());
             self->write_buf_->position(write_data.size());
             self->write_buf_->flip();
-            handle.write(self->write_buf_, [](SocketWriteEvent &event, TCPSocket &handle) -> void {
+            handle.write(self->write_buf_, [](SocketWriteEvent &event, auto& handle) -> void {
               fprintf(stderr, "WRITE err=%d / %d / %s\n", event.hasError(), event.error().code(), event.error().what());
             });
           } else {
@@ -100,7 +102,7 @@ int main() {
     fprintf(stderr, "%s\n", str.c_str());
   });
   std::shared_ptr<Loop> loop = UnsafeLoop::fromDefault();
-  std::shared_ptr<EchoClient> echo_client(EchoClient::create(loop, log));
+  std::shared_ptr<SimpleHttpsClient> echo_client(SimpleHttpsClient::create(loop, log));
 
   auto addr_param = std::make_shared<SockAddrConnectParam<sockaddr_in>>();
   uv_ip4_addr("52.43.121.77", 9000, addr_param->getSockAddr());

@@ -16,18 +16,21 @@ SocketConnectEvent::SocketConnectEvent() :
     error_({}) {}
 
 SocketConnectEvent::SocketConnectEvent(UvErrorEvent error) :
+    error_(std::make_shared<UvErrorEvent>(error)) {}
+
+SocketConnectEvent::SocketConnectEvent(std::shared_ptr<ErrorEvent> error) :
     error_(error) {}
 
 bool SocketConnectEvent::hasError() const {
-  return error_.code() != 0;
+  return error_ != nullptr;
 }
 
 ErrorEvent &SocketConnectEvent::error() {
-  return error_;
+  return *error_;
 }
 
 const ErrorEvent &SocketConnectEvent::error() const {
-  return error_;
+  return *error_;
 }
 
 SocketDisconnectEvent::SocketDisconnectEvent() :

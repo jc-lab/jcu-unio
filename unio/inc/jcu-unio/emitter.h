@@ -20,13 +20,15 @@
 namespace jcu {
 namespace unio {
 
+class Resource;
+
 /**
  * event emitter
- *
- * @tparam T resource type
  */
-template <class T>
 class Emitter {
+ public:
+  virtual ~Emitter() = default;
+
  protected:
   class BaseHandler {
    public:
@@ -40,7 +42,7 @@ class Emitter {
    private:
     struct Listener {
       bool once;
-      std::function<void(U& event, T& handle)> func;
+      std::function<void(U& event, Resource& handle)> func;
     };
     std::list<Listener> callbacks_;
 
@@ -51,7 +53,7 @@ class Emitter {
     int size() const override {
       return callbacks_.size();
     }
-    int call(U& event, T& handle) {
+    int call(U& event, Resource& handle) {
       int count = 0;
       for (auto it = callbacks_.begin(); it != callbacks_.end(); count++) {
         it->func(event, handle);
@@ -63,10 +65,10 @@ class Emitter {
       }
       return count;
     }
-    void on(std::function<void(U& event, T& handle)> callback) {
+    void on(std::function<void(U& event, Resource& handle)> callback) {
       callbacks_.emplace_back(std::move(Listener {false, std::move(callback)}));
     }
-    void once(std::function<void(U& event, T& handle)> callback) {
+    void once(std::function<void(U& event, Resource& handle)> callback) {
       callbacks_.emplace_back(std::move(Listener {true, std::move(callback)}));
     }
   };
@@ -78,12 +80,12 @@ class Emitter {
    * @return count
    */
   template <typename U>
-  int emit(U event, T& handle) {
+  int emit(U& event) {
     auto it = handlers_.find(typeid(U).hash_code());
     if (it != handlers_.end()) {
       Handler<U>* handler = dynamic_cast<Handler<U>*>(it->second.get());
       if (handler) {
-        return handler->call(event, handle);
+        return handler->call(event, dynamic_cast<Resource&>(*this));
       }
     }
     return 0;
@@ -91,7 +93,7 @@ class Emitter {
 
  public:
   template <typename U>
-  void on(std::function<void(U& event, T& handle)> callback) {
+  void on(std::function<void(U& event, Resource& handle)> callback) {
     auto& p = handlers_[typeid(U).hash_code()];
     Handler<U>* q = static_cast<Handler<U>*>(p.get());
     if (!p) {
@@ -102,7 +104,7 @@ class Emitter {
   }
 
   template <typename U>
-  void once(std::function<void(U& event, T& handle)> callback) {
+  void once(std::function<void(U& event, Resource& handle)> callback) {
     auto& p = handlers_[typeid(U).hash_code()];
     Handler<U>* q = static_cast<Handler<U>*>(p.get());
     if (!p) {

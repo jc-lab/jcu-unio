@@ -7,7 +7,7 @@
  *            of the Apache License 2.0.  See the LICENSE file for details.
  */
 
-#include <jcu-unio/handle.h>
+#include <jcu-unio/shared_object.h>
 
 namespace jcu {
 namespace unio {

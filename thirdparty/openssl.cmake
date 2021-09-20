@@ -1,5 +1,3 @@
-set(JCU_UNIO_USE_OPENSSL OFF CACHE BOOL "jcu_unio: TLS Support with OpenSSL")
-
 if (JCU_UNIO_USE_OPENSSL AND NOT TARGET OpenSSL::Crypto)
     if (NOT OPENSSL_FETCH_INFO)
         set(OPENSSL_FETCH_INFO

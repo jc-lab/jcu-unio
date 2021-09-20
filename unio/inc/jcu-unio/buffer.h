@@ -26,6 +26,8 @@ namespace unio {
 class Buffer {
  public:
   virtual ~Buffer() = default;
+  virtual void* base() = 0;
+  virtual const void* base() const = 0;
   virtual void* data() = 0;
   virtual const void* data() const = 0;
   virtual size_t capacity() const = 0;

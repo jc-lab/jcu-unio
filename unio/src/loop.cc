@@ -13,7 +13,7 @@
 #include <deque>
 
 #include <jcu-unio/loop.h>
-#include <jcu-unio/handle.h>
+#include <jcu-unio/shared_object.h>
 
 namespace jcu {
 namespace unio {

@@ -1,5 +1,5 @@
 /**
- * @file	resource.h
+ * @file	shared_object.h
  * @author	Joseph Lee <joseph@jc-lab.net>
  * @date	2021-09-11
  * @copyright Copyright (C) 2021 jc-lab. All rights reserved.
@@ -8,19 +8,24 @@
  */
 
 
-#ifndef OPENVPN_CLIENTPP_JCU_UNIO_UNIO_INC_JCU_UNIO_RESOURCE_H_
-#define OPENVPN_CLIENTPP_JCU_UNIO_UNIO_INC_JCU_UNIO_RESOURCE_H_
+#ifndef JCU_UNIO_SHARED_OBJECT_H_
+#define JCU_UNIO_SHARED_OBJECT_H_
+
+#include <memory>
 
 namespace jcu {
 namespace unio {
 
-class Resource {
+/**
+ * @tparam T The class of the final implementation
+ */
+template<class T>
+class SharedObject {
  public:
-  virtual ~Resource() = default;
-  virtual void close() = 0;
+  virtual std::shared_ptr<T> shared() const = 0;
 };
 
 } // namespace unio
 } // namespace jcu
 
-#endif //OPENVPN_CLIENTPP_JCU_UNIO_UNIO_INC_JCU_UNIO_RESOURCE_H_
+#endif //JCU_UNIO_SHARED_OBJECT_H_

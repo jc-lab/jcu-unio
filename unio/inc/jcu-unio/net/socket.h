@@ -56,6 +56,7 @@ class ConnectParam {
  public:
   ConnectParam() {}
   virtual ~ConnectParam() = default;
+  virtual const char* getHostname() const = 0;
   virtual const struct sockaddr* getSockAddr() const = 0;
 };
 
@@ -63,10 +64,20 @@ template<typename T>
 class SockAddrConnectParam : public ConnectParam {
  protected:
   T sockaddr_;
+  std::string hostname_;
 
  public:
   SockAddrConnectParam() {
     std::memset(&sockaddr_, 0, sizeof(sockaddr_));
+  }
+
+  void setHostname(const std::string& hostname) {
+    hostname_ = hostname;
+  }
+
+  const char* getHostname() const {
+    if (hostname_.empty()) return nullptr;
+    return hostname_.c_str();
   }
 
   const sockaddr *getSockAddr() const override {
@@ -78,17 +89,22 @@ class SockAddrConnectParam : public ConnectParam {
   }
 };
 
-template <class T>
-class Socket : public Handle<T> {
+class Socket : public Handle {
  public:
   virtual void read(
       std::shared_ptr<Buffer> buffer,
-      CompletionManyCallback<void(SocketReadEvent& event, T& handle)> callback
+      CompletionManyCallback<SocketReadEvent> callback
   ) = 0;
   virtual void cancelRead() = 0;
+
+  /**
+   * MUST call after the previous write operation is done.
+   * @param buffer
+   * @param callback
+   */
   virtual void write(
       std::shared_ptr<Buffer> buffer,
-      CompletionOnceCallback<void(SocketWriteEvent& event, T& handle)> callback
+      CompletionOnceCallback<SocketWriteEvent> callback
   ) = 0;
 };
 

@@ -11,29 +11,17 @@
 #ifndef JCU_UNIO_HANDLE_H_
 #define JCU_UNIO_HANDLE_H_
 
-#include <uv.h>
-
-#include <functional>
-#include <cstring>
-
 #include "resource.h"
 #include "emitter.h"
 
 namespace jcu {
 namespace unio {
 
-class Loop;
-
 /**
- * Common Events: CloseEvent.
- *
- * @tparam T The class of the final implementation
+ * common events
+ * - CloseEvent
  */
-template<class T>
-class Handle : public Resource, public Emitter<T> {
- public:
-  virtual std::shared_ptr<T> shared() const = 0;
-  virtual void close() = 0;
+class Handle : public Resource, public Emitter {
 };
 
 } // namespace unio

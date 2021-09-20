@@ -30,12 +30,20 @@ class VectorBuffer : public Buffer {
     buf_.resize(initial_size);
   }
 
-  void *data() override {
+  void *base() override {
     return buf_.data();
   }
 
-  const void *data() const override {
+  const void *base() const override {
     return buf_.data();
+  }
+
+  void *data() override {
+    return buf_.data() + position();
+  }
+
+  const void *data() const override {
+    return buf_.data() + position();
   }
 
   size_t capacity() const override {

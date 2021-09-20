@@ -14,6 +14,8 @@
 #include <functional>
 #include <string>
 
+#include "resource.h"
+
 namespace jcu {
 namespace unio {
 
@@ -54,11 +56,18 @@ class BaseEvent {
   virtual const ErrorEvent& error() const = 0;
 };
 
+/**
+ * @tparam T event type
+ * @tparam B base handle type
+ */
 template <typename T>
-using CompletionOnceCallback = std::function<T>;
+using CompletionCallback = std::function<void(T& event, Resource& handle)>;
 
 template <typename T>
-using CompletionManyCallback = std::function<T>;
+using CompletionOnceCallback = CompletionCallback<T>;
+
+template <typename T>
+using CompletionManyCallback = CompletionCallback<T>;
 
 } // namespace unio
 } // namespace jcu

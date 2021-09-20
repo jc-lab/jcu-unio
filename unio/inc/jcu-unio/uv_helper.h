@@ -11,6 +11,7 @@
 #define JCU_UNIO_UV_HELPER_H_
 
 #include "loop.h"
+#include "event.h"
 
 namespace jcu {
 namespace unio {
@@ -22,7 +23,7 @@ class UvRefBase {
   void attach() {
     uv_handle_set_data(baseHandle(), this);
   }
-  void close() {
+  virtual void close() {
     delete this;
   }
 };
@@ -35,7 +36,7 @@ class UvRefBase {
  */
 template <typename H, class D, typename F = std::function<void()>>
 class UvRef : public UvRefBase {
- private:
+ protected:
   H handle_;
   std::shared_ptr<D> data_;
   F fn_;
@@ -90,6 +91,96 @@ class UvRef : public UvRefBase {
   static UvRef<H, D, F>* from(void* handle) {
     UvRefBase* base = (UvRefBase*) uv_handle_get_data((uv_handle_t*)handle);
     return dynamic_cast<UvRef<H, D, F>*>(base);
+  }
+};
+
+/**
+ *
+ * @tparam H uv handle type
+ * @tparam D reference data type
+ * @tparam F callback
+ */
+template <typename H, typename E, class D>
+class UvCallbackRef : public UvRefBase {
+ protected:
+  H handle_;
+  std::shared_ptr<D> data_;
+  CompletionCallback<E> fn_;
+
+ public:
+  UvCallbackRef(std::shared_ptr<D> data) :
+      data_(data), fn_(nullptr)
+  {
+    std::memset(&handle_, 0, sizeof(handle_));
+  }
+
+  UvCallbackRef(std::shared_ptr<D> data, CompletionCallback<E> fn) :
+      data_(data), fn_(std::move(fn))
+  {
+    std::memset(&handle_, 0, sizeof(handle_));
+  }
+
+  uv_handle_t *baseHandle() const override {
+    return (uv_handle_t*)&handle_;
+  }
+
+  H* handle() {
+    return &handle_;
+  }
+
+  template <typename T>
+  T* handle() {
+    return (T*) &handle_;
+  }
+
+  std::shared_ptr<D> data() const {
+    return data_;
+  }
+
+  void setCallback(CompletionCallback<E> fn) {
+    fn_ = std::move(fn);
+  }
+
+  void publish(E event) {
+    fn_(event, *data_);
+  }
+
+  void publishAndClose(E event) {
+    fn_(event, *data_);
+    close();
+  }
+
+  template<typename F, typename ...Args>
+  bool reset(CompletionCallback<E> fn, F&& f, Args&& ...args) {
+    int rc = std::forward<F>(f)(handle(), std::forward<Args>(args)...);
+    if (rc) {
+      E event { UvErrorEvent {rc, 0} };
+      fn(event, *data_);
+      return false;
+    }
+    setCallback(std::move(fn));
+    attach();
+    return true;
+  }
+
+  template<typename F, typename ...Args>
+  static UvCallbackRef* create(std::shared_ptr<D> data, CompletionCallback<E> fn, F&& f, Args&& ...args) {
+    auto* instance = new UvCallbackRef<H, E, D>(data);
+    int rc = std::forward<F>(f)(instance->handle(), std::forward<Args>(args)...);
+    if (rc) {
+      delete instance;
+      E event { UvErrorEvent {rc, 0} };
+      fn(event, *data);
+      return nullptr;
+    }
+    instance->setCallback(std::move(fn));
+    instance->attach();
+    return instance;
+  }
+
+  static UvCallbackRef* from(void* handle) {
+    UvRefBase* base = (UvRefBase*) uv_handle_get_data((uv_handle_t*)handle);
+    return dynamic_cast<UvCallbackRef*>(base);
   }
 };
 

@@ -8,17 +8,19 @@
  */
 
 
-#ifndef OPENVPN_CLIENTPP_JCU_UNIO_UNIO_INC_JCU_UNIO_NET_TCP_SOCKET_H_
-#define OPENVPN_CLIENTPP_JCU_UNIO_UNIO_INC_JCU_UNIO_NET_TCP_SOCKET_H_
+#ifndef JCU_UNIO_NET_TCP_SOCKET_H_
+#define JCU_UNIO_NET_TCP_SOCKET_H_
 
+#include "../shared_object.h"
 #include "stream_socket.h"
 
 namespace jcu {
 namespace unio {
 
+class Loop;
 class Logger;
 
-class TCPSocket : public StreamSocket<TCPSocket> {
+class TCPSocket : public StreamSocket, public SharedObject<TCPSocket> {
  public:
   static std::shared_ptr<TCPSocket> create(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> log);
 };
@@ -26,4 +28,4 @@ class TCPSocket : public StreamSocket<TCPSocket> {
 } // namespace unio
 } // namespace jcu
 
-#endif //OPENVPN_CLIENTPP_JCU_UNIO_UNIO_INC_JCU_UNIO_NET_TCP_SOCKET_H_
+#endif //JCU_UNIO_NET_TCP_SOCKET_H_
