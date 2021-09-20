@@ -1,0 +1,6 @@
+#ifndef JCU_UNIO_CONFIG_H_
+#define JCU_UNIO_CONFIG_H_
+
+#cmakedefine JCU_UNIO_USE_OPENSSL
+
+#endif /* JCU_UNIO_CONFIG_H_ */
