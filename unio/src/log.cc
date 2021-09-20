@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <time.h>
 
+#include <vector>
+
 #include "log.h"
 
 #ifdef _MSC_VER
