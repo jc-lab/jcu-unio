@@ -36,6 +36,6 @@ class Logger {
 std::shared_ptr<Logger> createDefaultLogger(const LogWriter_t &writer);
 
 } // namespace unio
-} // namespace ovpnc
+} // namespace jcu
 
 #endif //JCU_UNIO_LOG_H_
