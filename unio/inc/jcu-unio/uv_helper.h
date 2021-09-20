@@ -10,6 +10,8 @@
 #ifndef JCU_UNIO_UV_HELPER_H_
 #define JCU_UNIO_UV_HELPER_H_
 
+#include <cstring>
+
 #include "loop.h"
 #include "event.h"
 
