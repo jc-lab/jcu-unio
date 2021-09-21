@@ -297,6 +297,10 @@ class OpenSSLContextImpl : public OpenSSLContext {
     return ssl_ctx_.get();
   }
 
+  std::shared_ptr<SSLProvider> getProvider() const override {
+    return provider_;
+  }
+
   std::unique_ptr<SSLEngine> createEngine(SSLRole role) const override {
     return std::make_unique<OpenSSLEngineImpl>(self_.lock(), role);
   }

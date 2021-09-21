@@ -102,10 +102,13 @@ class SSLEngine {
   virtual bool shutdown() = 0;
 };
 
+class SSLProvider;
+
 class SSLContext {
  public:
   virtual ~SSLContext() = default;
 
+  virtual std::shared_ptr<SSLProvider> getProvider() const = 0;
   virtual std::unique_ptr<SSLEngine> createEngine(SSLRole role) const = 0;
 };
 
