@@ -121,7 +121,7 @@ class Emitter {
       if (it->second) {
         it->second->clear();
       }
-      handlers_.template erase(it);
+      handlers_.erase(it);
     }
   }
 
