@@ -78,7 +78,8 @@ class SSLEngine {
   enum DataResult {
     kDataOk = 0,
     kDataClosed = 0x01,
-    kDataReadMore = 0x02,
+    kDataRead = 0x02,
+    kDataReadMore = 0x04,
   };
 
   typedef std::function<void(HandshakeEvent &)> HandshakeCallback;

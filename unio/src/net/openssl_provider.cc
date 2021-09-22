@@ -258,8 +258,9 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
 
       rv = SSL_pending(ssl_.get());
       if (rv > 0) {
-        return kDataReadMore;
+        return (DataResult)(kDataRead | kDataReadMore);
       }
+      return kDataRead;
     }
     return kDataOk;
   }

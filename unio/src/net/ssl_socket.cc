@@ -121,11 +121,13 @@ class SSLSocketImpl : public SSLSocket {
           inbound_buffer = self->socket_inbound_buffer_.get();
           if (inbound_buffer) inbound_buffer->clear();
           result = self->ssl_engine_->unwrap(event.buffer(), inbound_buffer);
-          if (inbound_buffer && inbound_buffer->remaining() > 0) {
-            SocketReadEvent event {inbound_buffer};
-            self->read_event_callback_(event, *self);
+          if (result & SSLEngine::kDataRead) {
+            if (inbound_buffer && inbound_buffer->remaining() > 0) {
+              SocketReadEvent event {inbound_buffer};
+              self->read_event_callback_(event, *self);
+            }
           }
-        } while(inbound_buffer && result == SSLEngine::kDataReadMore);
+        } while(inbound_buffer && (result & SSLEngine::kDataReadMore));
         self->tlsProcess();
       });
 
