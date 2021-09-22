@@ -15,20 +15,21 @@
 
 #include <uv.h>
 
+#include "shared_object.h"
+
 namespace jcu {
 namespace unio {
 
 typedef std::function<void()> QueuedTask_t;
 
 struct LoopContext;
-class Loop {
+class Loop : public SharedObject<Loop> {
  protected:
   std::unique_ptr<LoopContext> ctx_;
 
  public:
   Loop();
   virtual ~Loop() = default;
-  virtual std::shared_ptr<Loop> shared() const = 0;
   virtual uv_loop_t *get() const = 0;
 
   /**

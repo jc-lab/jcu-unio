@@ -78,7 +78,8 @@ class SSLEngine {
   enum DataResult {
     kDataOk = 0,
     kDataClosed = 0x01,
-    kDataReadMore = 0x02,
+    kDataRead = 0x02,
+    kDataReadMore = 0x04,
   };
 
   typedef std::function<void(HandshakeEvent &)> HandshakeCallback;
@@ -102,10 +103,13 @@ class SSLEngine {
   virtual bool shutdown() = 0;
 };
 
+class SSLProvider;
+
 class SSLContext {
  public:
   virtual ~SSLContext() = default;
 
+  virtual std::shared_ptr<SSLProvider> getProvider() const = 0;
   virtual std::unique_ptr<SSLEngine> createEngine(SSLRole role) const = 0;
 };
 

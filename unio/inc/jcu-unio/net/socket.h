@@ -11,6 +11,8 @@
 #ifndef JCU_UNIO_NET_SOCKET_H_
 #define JCU_UNIO_NET_SOCKET_H_
 
+#include <cstring>
+
 #include "../buffer.h"
 #include "../event.h"
 #include "../handle.h"

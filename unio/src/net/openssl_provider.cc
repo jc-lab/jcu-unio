@@ -62,9 +62,8 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
       ssl_context_(ssl_context),
       role_(role),
       state_(kStateClosed),
-      handshake_error_(nullptr)
-  {
-    logger_ = createDefaultLogger([](const std::string& msg) -> void {
+      handshake_error_(nullptr) {
+    logger_ = createDefaultLogger([](const std::string &msg) -> void {
       fprintf(stderr, "%s\n", msg.c_str());
     });
     err_bio_.reset(BIO_new(BIO_s_mem()));
@@ -72,10 +71,10 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
 
   bool handleError(int rv, bool force_fatal = false) {
     long msg_size = 0;
-    char* msg_ptr = nullptr;
+    char *msg_ptr = nullptr;
     std::string message;
 
-    if(rv > 0) {
+    if (rv > 0) {
       return false;
     }
 
@@ -165,7 +164,7 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
     return handshake_error_;
   }
 
-  void setHostname(const std::string& hostname) {
+  void setHostname(const std::string &hostname) {
     hostname_ = hostname;
   }
 
@@ -188,7 +187,7 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
     if (!BIO_new_bio_pair(&ssl_bio, 0, &app_bio, 0)) {
       //TODO: ERROR
       handleError(-1, true);
-      return ;
+      return;
     }
 
     app_bio_.reset(app_bio);
@@ -212,7 +211,7 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
     return rv;
   }
 
-  DataResult wrap(Buffer* input, Buffer* output) override {
+  DataResult wrap(Buffer *input, Buffer *output) override {
     int rv = 0;
     if (input) {
       rv = SSL_write(ssl_.get(), input->data(), input->remaining());
@@ -235,7 +234,7 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
     return kDataOk;
   }
 
-  DataResult unwrap(Buffer* input, Buffer* output) override {
+  DataResult unwrap(Buffer *input, Buffer *output) override {
     int rv = 0;
     if (input && input->remaining() > 0) {
       rv = BIO_write(app_bio_.get(), input->data(), input->remaining());
@@ -244,7 +243,7 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
       }
       input->position(input->position() + rv);
     }
-    if(!SSL_is_init_finished(ssl_.get())) {
+    if (!SSL_is_init_finished(ssl_.get())) {
       if (doHandshake() != 1) {
         return kDataOk;
       }
@@ -259,8 +258,9 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
 
       rv = SSL_pending(ssl_.get());
       if (rv > 0) {
-        return kDataReadMore;
+        return (DataResult)(kDataRead | kDataReadMore);
       }
+      return kDataRead;
     }
     return kDataOk;
   }
@@ -295,6 +295,10 @@ class OpenSSLContextImpl : public OpenSSLContext {
 
   SSL_CTX *getNativeCtx() override {
     return ssl_ctx_.get();
+  }
+
+  std::shared_ptr<SSLProvider> getProvider() const override {
+    return provider_;
   }
 
   std::unique_ptr<SSLEngine> createEngine(SSLRole role) const override {
@@ -344,7 +348,7 @@ class OpenSSLProviderImpl : public OpenSSLProvider {
         break;
       }
       ret = true;
-    } while(0);
+    } while (0);
     EVP_PKEY_CTX_free(pctx);
     return ret;
   }

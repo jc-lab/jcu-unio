@@ -9,11 +9,11 @@
 
 #include <memory>
 #include <cstdlib>
+#include <cstring>
 #include <mutex>
 #include <deque>
 
 #include <jcu-unio/loop.h>
-#include <jcu-unio/shared_object.h>
 
 namespace jcu {
 namespace unio {
