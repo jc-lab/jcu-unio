@@ -63,7 +63,7 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
       role_(role),
       state_(kStateClosed),
       handshake_error_(nullptr) {
-    logger_ = createDefaultLogger([](const std::string &msg) -> void {
+    logger_ = createDefaultLogger([](Logger::LogLevel level, const std::string &msg) -> void {
       fprintf(stderr, "%s\n", msg.c_str());
     });
     err_bio_.reset(BIO_new(BIO_s_mem()));

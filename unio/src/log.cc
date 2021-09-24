@@ -73,18 +73,18 @@ class DefaultLoggerImpl : public Logger {
     } while (0);
 
     if (log_writer_) {
-      log_writer_(buf.data());
+      log_writer_(level, buf.data());
     }
   }
 };
 
 std::shared_ptr<Logger> createNullLogger() {
-  return createDefaultLogger([](auto &t) -> void {});
+  return createDefaultLogger([](auto l, auto& t) -> void {});
 }
 
 } // namespace intl
 
-std::shared_ptr<Logger> createDefaultLogger(const LogWriter_t &writer) {
+std::shared_ptr<Logger> createDefaultLogger(const Logger::LogWriter_t &writer) {
   return std::make_shared<intl::DefaultLoggerImpl>(writer);
 }
 

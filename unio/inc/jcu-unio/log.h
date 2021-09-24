@@ -18,8 +18,6 @@
 namespace jcu {
 namespace unio {
 
-typedef std::function<void(const std::string &log)> LogWriter_t;
-
 class Logger {
  public:
   enum LogLevel {
@@ -30,10 +28,12 @@ class Logger {
     kLogError
   };
 
+  typedef std::function<void(LogLevel level, const std::string &log)> LogWriter_t;
+
   virtual void logf(LogLevel level, const char *format, ...) = 0;
 };
 
-std::shared_ptr<Logger> createDefaultLogger(const LogWriter_t &writer);
+std::shared_ptr<Logger> createDefaultLogger(const Logger::LogWriter_t &writer);
 
 } // namespace unio
 } // namespace jcu

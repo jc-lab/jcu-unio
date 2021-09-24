@@ -106,7 +106,7 @@ int main() {
   setbuf(stdout, 0);
   setbuf(stderr, 0);
 
-  std::shared_ptr<Logger> log = createDefaultLogger([](const std::string& str) -> void {
+  std::shared_ptr<Logger> log = createDefaultLogger([](jcu::unio::Logger::LogLevel level, const std::string& str) -> void {
     fprintf(stderr, "%s\n", str.c_str());
   });
   std::shared_ptr<Loop> loop = UnsafeLoop::fromDefault();
