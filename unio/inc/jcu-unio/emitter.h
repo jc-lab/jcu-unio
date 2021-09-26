@@ -160,6 +160,26 @@ class Emitter {
   }
 };
 
+template <>
+inline void Emitter::on<InitEvent>(std::function<void(InitEvent& event, Resource& handle)> callback) {
+  if (inited_) {
+    callback(init_event_, dynamic_cast<Resource&>(*this));
+    return ;
+  }
+  auto q = getHandler<InitEvent>();
+  q->on(std::move(callback));
+}
+
+template <>
+inline void Emitter::once<InitEvent>(std::function<void(InitEvent& event, Resource& handle)> callback) {
+  if (inited_) {
+    callback(init_event_, dynamic_cast<Resource&>(*this));
+    return ;
+  }
+  auto q = getHandler<InitEvent>();
+  q->once(std::move(callback));
+}
+
 } // namespace unio
 } // namespace jcu
 
