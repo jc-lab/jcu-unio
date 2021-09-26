@@ -11,7 +11,7 @@ if (JCU_UNIO_USE_OPENSSL AND NOT TARGET OpenSSL::Crypto)
     FetchContent_Declare(
             openssl
             GIT_REPOSITORY https://github.com/jc-lab/openssl-cmake.git
-            GIT_TAG        b27e5db43cdfce0ab9268bb2dd35bb8dab19ff62
+            GIT_TAG        3526a9f0162d125204ec95919e5b69cd356086cd
     )
     FetchContent_GetProperties(openssl)
     if (NOT openssl_POPULATED)

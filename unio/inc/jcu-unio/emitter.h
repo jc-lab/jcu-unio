@@ -122,29 +122,9 @@ class Emitter {
     q->on(std::move(callback));
   }
 
-  template <>
-  void on<InitEvent>(std::function<void(InitEvent& event, Resource& handle)> callback) {
-    if (inited_) {
-      callback(init_event_, dynamic_cast<Resource&>(*this));
-      return ;
-    }
-    auto q = getHandler<InitEvent>();
-    q->on(std::move(callback));
-  }
-
   template <typename U>
   void once(std::function<void(U& event, Resource& handle)> callback) {
     auto q = getHandler<U>();
-    q->once(std::move(callback));
-  }
-
-  template <>
-  void once<InitEvent>(std::function<void(InitEvent& event, Resource& handle)> callback) {
-    if (inited_) {
-      callback(init_event_, dynamic_cast<Resource&>(*this));
-      return ;
-    }
-    auto q = getHandler<InitEvent>();
     q->once(std::move(callback));
   }
 

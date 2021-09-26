@@ -236,7 +236,7 @@ class TCPSocketImpl : public TCPSocket {
   }
 
   int accept(std::shared_ptr<StreamSocket> client) override {
-    return UV__EINVAL;
+    return 0;
   }
 
   bool isConnected() const override {

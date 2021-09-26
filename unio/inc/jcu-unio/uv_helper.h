@@ -148,9 +148,9 @@ class UvCallbackRef : public UvRefBase {
       fn_(event, *data_);
     } else {
       if (event.hasError()) {
-        data_->emit<ErrorEvent>(event.error());
+        data_->template emit<ErrorEvent>(event.error());
       } else {
-        data_->emit<E>(event);
+        data_->template emit<E>(event);
       }
     }
   }
@@ -168,7 +168,7 @@ class UvCallbackRef : public UvRefBase {
       if (fn) {
         fn(event, *data_);
       } else {
-        data_->emit<ErrorEvent>(event.error());
+        data_->template emit<ErrorEvent>(event.error());
       }
       return false;
     }
@@ -187,7 +187,7 @@ class UvCallbackRef : public UvRefBase {
       if (fn) {
         fn(event, *data);
       } else {
-        data->emit<ErrorEvent>(event.error());
+        data->template emit<ErrorEvent>(event.error());
       }
       return nullptr;
     }

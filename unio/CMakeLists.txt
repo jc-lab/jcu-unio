@@ -22,6 +22,7 @@ add_library(jcu_unio
         ${CMAKE_CURRENT_SOURCE_DIR}/src/log.h
         ${CMAKE_CURRENT_SOURCE_DIR}/src/log.cc
         ${CMAKE_CURRENT_SOURCE_DIR}/src/loop.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/emitter.cc
         ${CMAKE_CURRENT_SOURCE_DIR}/src/handle.cc
         ${CMAKE_CURRENT_SOURCE_DIR}/src/event.cc
         ${CMAKE_CURRENT_SOURCE_DIR}/src/buffer.cc
