@@ -101,6 +101,7 @@ class SSLEngine {
   virtual DataResult unwrap(Buffer* input, Buffer* output) = 0;
 
   virtual bool shutdown() = 0;
+  virtual bool isClosing() const = 0;
 };
 
 class SSLProvider;
@@ -110,7 +111,7 @@ class SSLContext {
   virtual ~SSLContext() = default;
 
   virtual std::shared_ptr<SSLProvider> getProvider() const = 0;
-  virtual std::unique_ptr<SSLEngine> createEngine(SSLRole role) const = 0;
+  virtual std::unique_ptr<SSLEngine> createEngine(const BasicParams& basic_params, SSLRole role) const = 0;
 };
 
 class SSLProvider {

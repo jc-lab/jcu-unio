@@ -9,47 +9,28 @@
 
 #include <jcu-unio/net/stream_socket.h>
 
+#include <utility>
+
 namespace jcu {
 namespace unio {
 
 SocketConnectEvent::SocketConnectEvent() :
-    error_({}) {}
-
-SocketConnectEvent::SocketConnectEvent(UvErrorEvent error) :
-    error_(std::make_shared<UvErrorEvent>(error)) {}
+    AbstractEvent(nullptr) {}
 
 SocketConnectEvent::SocketConnectEvent(std::shared_ptr<ErrorEvent> error) :
-    error_(error) {}
-
-bool SocketConnectEvent::hasError() const {
-  return error_ != nullptr;
-}
-
-ErrorEvent &SocketConnectEvent::error() {
-  return *error_;
-}
-
-const ErrorEvent &SocketConnectEvent::error() const {
-  return *error_;
-}
+    AbstractEvent(std::move(error)) {}
 
 SocketDisconnectEvent::SocketDisconnectEvent() :
-    error_({}) {}
+    AbstractEvent(nullptr) {}
 
-SocketDisconnectEvent::SocketDisconnectEvent(UvErrorEvent error) :
-    error_(error) {}
+SocketDisconnectEvent::SocketDisconnectEvent(std::shared_ptr<ErrorEvent> error) :
+    AbstractEvent(std::move(error)) {}
 
-bool SocketDisconnectEvent::hasError() const {
-  return error_.code() != 0;
-}
+SocketListenEvent::SocketListenEvent() :
+    AbstractEvent(nullptr) {}
 
-ErrorEvent &SocketDisconnectEvent::error() {
-  return error_;
-}
-
-const ErrorEvent &SocketDisconnectEvent::error() const {
-  return error_;
-}
+SocketListenEvent::SocketListenEvent(std::shared_ptr<ErrorEvent> error) :
+    AbstractEvent(std::move(error)) {}
 
 } // namespace unio
 } // namespace jcu

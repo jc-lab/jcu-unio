@@ -32,5 +32,26 @@ UvErrorEvent::UvErrorEvent(int uv_error, int sys_error)
   }
 }
 
+AbstractEvent::AbstractEvent(std::shared_ptr<ErrorEvent> error) :
+  error_(std::move(error))
+{}
+
+bool AbstractEvent::hasError() const {
+  return error_ != nullptr;
+}
+
+ErrorEvent &AbstractEvent::error() {
+  return *error_;
+}
+
+const ErrorEvent &AbstractEvent::error() const {
+  return *error_;
+}
+
+InitEvent::InitEvent() :
+  AbstractEvent(nullptr) {}
+InitEvent::InitEvent(std::shared_ptr<ErrorEvent> error) :
+  AbstractEvent(error) {}
+
 } // namespace unio
 } // namespace jcu

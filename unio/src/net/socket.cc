@@ -9,44 +9,22 @@
 
 #include <jcu-unio/net/socket.h>
 
+#include <utility>
+
 namespace jcu {
 namespace unio {
 
 SocketReadEvent::SocketReadEvent(Buffer *buffer) :
-    error_({}), buffer_(buffer) {}
+    AbstractEvent(nullptr), buffer_(buffer) {}
 
-SocketReadEvent::SocketReadEvent(UvErrorEvent error, Buffer *buffer) :
-    error_(error), buffer_(buffer) {}
-
-bool SocketReadEvent::hasError() const {
-  return error_.code() != 0;
-}
-
-ErrorEvent &SocketReadEvent::error() {
-  return error_;
-}
-
-const ErrorEvent &SocketReadEvent::error() const {
-  return error_;
-}
+SocketReadEvent::SocketReadEvent(std::shared_ptr<ErrorEvent> error, Buffer *buffer) :
+    AbstractEvent(std::move(error)), buffer_(buffer) {}
 
 SocketWriteEvent::SocketWriteEvent() :
-    error_({}) {}
+    AbstractEvent(nullptr) {}
 
-SocketWriteEvent::SocketWriteEvent(UvErrorEvent error) :
-    error_(error) {}
-
-bool SocketWriteEvent::hasError() const {
-  return error_.code() != 0;
-}
-
-ErrorEvent &SocketWriteEvent::error() {
-  return error_;
-}
-
-const ErrorEvent &SocketWriteEvent::error() const {
-  return error_;
-}
+SocketWriteEvent::SocketWriteEvent(std::shared_ptr<ErrorEvent> error) :
+    AbstractEvent(std::move(error)) {}
 
 } // namespace unio
 } // namespace jcu

@@ -24,8 +24,7 @@ class SSLContext;
 class SSLSocket : public StreamSocket, public SharedObject<SSLSocket> {
  public:
   static std::shared_ptr<SSLSocket> create(
-      std::shared_ptr<Loop> loop,
-      std::shared_ptr<Logger> log,
+      const BasicParams& basic_params,
       std::shared_ptr<SSLContext> ssl_context
   );
 

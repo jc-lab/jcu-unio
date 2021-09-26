@@ -16,40 +16,66 @@
 namespace jcu {
 namespace unio {
 
-class SocketConnectEvent : public BaseEvent {
- protected:
-  std::shared_ptr<ErrorEvent> error_;
-
+class SocketConnectEvent : public AbstractEvent {
  public:
   SocketConnectEvent();
-  SocketConnectEvent(UvErrorEvent error);
   SocketConnectEvent(std::shared_ptr<ErrorEvent> error);
-  bool hasError() const override;
-  ErrorEvent &error() override;
-  const ErrorEvent &error() const override;
 };
 
-class SocketDisconnectEvent : public BaseEvent {
- protected:
-  UvErrorEvent error_;
-
+class SocketDisconnectEvent : public AbstractEvent {
  public:
   SocketDisconnectEvent();
-  SocketDisconnectEvent(UvErrorEvent error);
-  bool hasError() const override;
-  ErrorEvent &error() override;
-  const ErrorEvent &error() const override;
+  SocketDisconnectEvent(std::shared_ptr<ErrorEvent> error);
+};
+
+class SocketListenEvent : public AbstractEvent {
+ public:
+  SocketListenEvent();
+  SocketListenEvent(std::shared_ptr<ErrorEvent> error);
 };
 
 class StreamSocket : public Socket {
  public:
+ /**
+  * When the connect is complete, the callback is called.
+  * If the callback is nullptr,
+  * a SocketConnectEvent is emitted if the connect has completed successfully,
+  * or an ErrorEvent if an error has occurred.
+  *
+  * @param connect_param
+  * @param callback
+  */
   virtual void connect(
       std::shared_ptr<ConnectParam> connect_param,
       CompletionOnceCallback<SocketConnectEvent> callback
   ) = 0;
 
+  /**
+   * When the disconnect is complete, the callback is called.
+   * If the callback is nullptr,
+   * a SocketDisconnectEvent is emitted if the disconnect has completed successfully,
+   * or an ErrorEvent if an error has occurred.
+   *
+   * @param callback
+   */
   virtual void disconnect(
       CompletionOnceCallback<SocketDisconnectEvent> callback
+  ) = 0;
+
+  /**
+   * When the disconnect is complete, the callback is called.
+   * If the callback is nullptr,
+   * a SocketListenEvent is emitted if the disconnect has completed successfully,
+   * or an ErrorEvent if an error has occurred.
+   *
+   * @param callback
+   */
+  virtual int listen(
+      int backlog
+  ) = 0;
+
+  virtual int accept(
+      std::shared_ptr<StreamSocket> client
   ) = 0;
 
   virtual bool isConnected() const = 0;

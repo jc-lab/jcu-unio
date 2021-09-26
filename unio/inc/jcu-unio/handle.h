@@ -11,6 +11,8 @@
 #ifndef JCU_UNIO_HANDLE_H_
 #define JCU_UNIO_HANDLE_H_
 
+#include <mutex>
+
 #include "resource.h"
 #include "emitter.h"
 
@@ -20,8 +22,24 @@ namespace unio {
 /**
  * common events
  * - CloseEvent
+ * - InitEvent
  */
 class Handle : public Resource, public Emitter {
+ protected:
+  std::mutex init_mtx_;
+
+  virtual void _init() = 0;
+ public:
+  /**
+   * initialize handle
+   *
+   * It is called automatically, but you can call it manually if you need it
+   * It must be called from the loop thread.
+   */
+  virtual void init() {
+    std::unique_lock<std::mutex> lock(init_mtx_);
+    _init();
+  }
 };
 
 } // namespace unio

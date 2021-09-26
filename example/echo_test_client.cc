@@ -31,11 +31,49 @@ class SimpleHttpsClient {
   // channelReadComplete
 
   void init() {
-    socket_ = TCPSocket::create(loop_, log_);
+    std::shared_ptr<SimpleHttpsClient> self(self_.lock());
+    jcu::unio::BasicParams basic_params { loop_, log_ };
+    socket_ = TCPSocket::create(basic_params);
     read_buf_ = createFixedSizeBuffer(1024);
     write_buf_ = createFixedSizeBuffer(1024);
-    socket_->on<CloseEvent>([](CloseEvent& event, TCPSocket& handle) -> void {
+    socket_->on<CloseEvent>([](CloseEvent& event, Resource& resource) -> void {
       printf("CloseEvent\n");
+    });
+    socket_->on<SocketReadEvent>([self](SocketReadEvent& event, Resource& resource) -> void {
+      auto& handle = dynamic_cast<TCPSocket&>(resource);
+      if (event.hasError()) {
+        auto& error = event.error();
+        printf("READ ERR: %d %s\n", error.code(), error.what());
+
+        handle.close();
+      } else {
+        std::string text((const char *) event.buffer()->data(), event.buffer()->remaining());
+        printf("READ: %s\n", text.c_str());
+
+        if (!self->is_first_send_) {
+          self->is_first_send_ = true;
+          std::string write_data;
+          write_data = "HELLO WORLD!!!\n";
+          memcpy(self->write_buf_->data(), write_data.c_str(), write_data.size());
+          self->write_buf_->position(write_data.size());
+          self->write_buf_->flip();
+          handle.write(self->write_buf_, [](SocketWriteEvent &event, auto& handle) -> void {
+            if (event.hasError()) {
+              fprintf(stderr, "WRITE err=%d / %d / %s\n", event.hasError(), event.error().code(), event.error().what());
+            } else {
+              fprintf(stderr, "WRITE OK\n");
+            }
+          });
+        } else {
+          printf("GO DISCONNECT\n");
+          self->loop_->sendQueuedTask([handle = handle.shared()]() -> void {
+            handle->disconnect([](auto &event, auto &handle) -> void {
+              printf("DISCONNECTED\n");
+              handle.close();
+            });
+          });
+        }
+      }
     });
   }
 
@@ -51,43 +89,22 @@ class SimpleHttpsClient {
     return instance;
   }
 
-  void connect(std::shared_ptr<ConnectParam> connect_param) {
+  void start(std::shared_ptr<ConnectParam> connect_param) {
     std::shared_ptr<SimpleHttpsClient> self(self_.lock());
-    socket_->connect(connect_param, [self](SocketConnectEvent& event, Resource& resource) -> void {
-      auto& handle = dynamic_cast<TCPSocket&>(resource);
-      printf("CONNECTED %d %s // %d\n", event.error().code(), event.error().what(), handle.isConnected());
-      if (event.hasError()) {
-        handle.close();
-        return ;
-      }
-      handle.read(self->read_buf_, [self](SocketReadEvent& event, Resource& resource) -> void {
+    socket_->once<jcu::unio::InitEvent>([self, connect_param](InitEvent& event, auto& resource) -> void {
+      auto& socket = dynamic_cast<jcu::unio::TCPSocket&>(resource);
+      socket.connect(connect_param, [self](SocketConnectEvent& event, Resource& resource) -> void {
         auto& handle = dynamic_cast<TCPSocket&>(resource);
         if (event.hasError()) {
-          auto& error = event.error();
-          printf("READ ERR: %d %s\n", error.code(), error.what());
-
-          handle.close();
+          printf("CONNECT FAILED %d %s // %d\n", event.error().code(), event.error().what(), handle.isConnected());
         } else {
-          std::string text((const char *) event.buffer()->data(), event.buffer()->remaining());
-          printf("READ: %s\n", text.c_str());
-
-          if (!self->is_first_send_) {
-            self->is_first_send_ = true;
-            std::string write_data;
-            write_data = "HELLO WORLD!!!\n";
-            memcpy(self->write_buf_->data(), write_data.c_str(), write_data.size());
-            self->write_buf_->position(write_data.size());
-            self->write_buf_->flip();
-            handle.write(self->write_buf_, [](SocketWriteEvent &event, auto& handle) -> void {
-              fprintf(stderr, "WRITE err=%d / %d / %s\n", event.hasError(), event.error().code(), event.error().what());
-            });
-          } else {
-            handle.disconnect([](auto &event, auto &handle) -> void {
-              printf("DISCONNECTED\n");
-              handle.close();
-            });
-          }
+          printf("CONNECTED %d\n", handle.isConnected());
         }
+        if (event.hasError()) {
+          handle.close();
+          return ;
+        }
+        handle.read(self->read_buf_);
       });
     });
   }
@@ -98,7 +115,7 @@ int main() {
   setbuf(stdout, 0);
   setbuf(stderr, 0);
 
-  std::shared_ptr<Logger> log = createDefaultLogger([](const std::string& str) -> void {
+  std::shared_ptr<Logger> log = createDefaultLogger([](Logger::LogLevel level, const std::string& str) -> void {
     fprintf(stderr, "%s\n", str.c_str());
   });
   std::shared_ptr<Loop> loop = UnsafeLoop::fromDefault();
@@ -108,7 +125,7 @@ int main() {
   uv_ip4_addr("52.43.121.77", 9000, addr_param->getSockAddr());
 //  uv_ip4_addr("127.0.0.1", 7777, addr_param->getSockAddr());
 
-  echo_client->connect(addr_param);
+  echo_client->start(addr_param);
 
   loop->init();
 

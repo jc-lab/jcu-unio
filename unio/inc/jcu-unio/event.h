@@ -38,6 +38,13 @@ class UvErrorEvent : public ErrorEvent {
   UvErrorEvent();
   UvErrorEvent(int uv_error, int sys_error);
 
+  static std::shared_ptr<UvErrorEvent> createIfNeeded(int uv_error, int sys_error = 0) {
+    if (uv_error || sys_error) {
+      return std::make_shared<UvErrorEvent>(uv_error, sys_error);
+    }
+    return nullptr;
+  }
+
   int code() const override {
     return code_;
   }
@@ -51,9 +58,27 @@ class UvErrorEvent : public ErrorEvent {
 
 class BaseEvent {
  public:
+  virtual ~BaseEvent() = default;
   virtual bool hasError() const = 0;
   virtual ErrorEvent& error() = 0;
   virtual const ErrorEvent& error() const = 0;
+};
+
+class AbstractEvent : public BaseEvent {
+ protected:
+  std::shared_ptr<ErrorEvent> error_;
+
+ public:
+  AbstractEvent(std::shared_ptr<ErrorEvent> error);
+  bool hasError() const override;
+  ErrorEvent &error() override;
+  const ErrorEvent &error() const override;
+};
+
+class InitEvent : public AbstractEvent {
+ public:
+  InitEvent();
+  InitEvent(std::shared_ptr<ErrorEvent> error);
 };
 
 /**
