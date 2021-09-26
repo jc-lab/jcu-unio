@@ -51,7 +51,7 @@ class TimerImpl : public Timer {
     return self_.lock();
   }
 
-  void init() override {
+  void _init() override {
     int rc = uv_timer_init(basic_params_.loop->get(), handle_.handle());
     if (rc == 0) {
       handle_.setData(self_.lock());

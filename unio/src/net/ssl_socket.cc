@@ -54,7 +54,7 @@ class SSLSocketImpl : public SSLSocket {
     return self_.lock();
   }
 
-  void init() override {
+  void _init() override {
     InitEvent event;
     emitInit(std::move(event));
   }

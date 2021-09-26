@@ -81,7 +81,7 @@ class TCPSocketImpl : public TCPSocket {
     return self_.lock();
   }
 
-  void init() override {
+  void _init() override {
     int rc;
     rc = uv_tcp_init(basic_params_.loop->get(), handle_.handle());
     if (rc == 0) {
