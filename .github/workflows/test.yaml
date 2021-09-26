@@ -41,7 +41,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - run: docker build --tag=temp01 -f test/windows.Dockerfile .
+      - name: "CMake Cache"
+        run: |
+          mkdir "C:\\build"
+          cd "C:\\build"
+          ls "${{ github.workspace }}"
+          & 'C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/Common7\Tools\Launch-VsDevShell.ps1'
+          cmake "${{ github.workspace }}"
+      - name: "CMake Build"
+        run: |
+          cd "C:\\build"
+          cmake --build . --config RelWithDebInfo
 #      - name: Set up Docker Context for Buildx
 #        id: buildx-context
 #        run: docker context create builders
