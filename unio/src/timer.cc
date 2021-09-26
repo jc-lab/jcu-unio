@@ -32,47 +32,55 @@ class TimerImpl : public Timer {
 
   std::weak_ptr<TimerImpl> self_;
 
-  std::shared_ptr<Loop> loop_;
-  std::shared_ptr<Logger> log_;
+  BasicParams basic_params_;
 
   HandleRef handle_;
 
-  TimerImpl(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> logger) :
-    loop_(loop), log_(logger)
+  TimerImpl(const BasicParams& basic_params) :
+    basic_params_(basic_params)
   {
-    log_->logf(Logger::kLogTrace, "Timer: construct");
+    basic_params_.logger->logf(Logger::kLogTrace, "Timer: construct");
   }
 
   ~TimerImpl()
   {
-    log_->logf(Logger::kLogTrace, "Timer: destroy");
+    basic_params_.logger->logf(Logger::kLogTrace, "Timer: destroy");
   }
 
   std::shared_ptr<Timer> shared() const override {
     return self_.lock();
   }
 
+  void init() override {
+    int rc = uv_timer_init(basic_params_.loop->get(), handle_.handle());
+    if (rc == 0) {
+      handle_.setData(self_.lock());
+      handle_.attach();
+    }
+    InitEvent event { UvErrorEvent::createIfNeeded(rc) };
+    emitInit(std::move(event));
+  }
+
   static void closeCallback(uv_handle_t* handle) {
     auto* ref = HandleRef::from(handle);
     std::shared_ptr<TimerImpl> self = ref->data();
-    ref->close();
-    self->log_->logf(jcu::unio::Logger::kLogTrace, "TimerImpl: closeCallback");
+    self->basic_params_.logger->logf(jcu::unio::Logger::kLogTrace, "TimerImpl: closeCallback");
     CloseEvent event {};
     self->emit(event);
+    self->offAll();
+    ref->close();
   }
 
   void close() override {
     uv_close(handle_.handle<uv_handle_t>(), closeCallback);
   }
 
-  UvErrorEvent stop() override {
-    int rc = uv_timer_stop(handle_.handle());
-    return UvErrorEvent { rc, 0 };
+  int stop() override {
+    return uv_timer_stop(handle_.handle());
   }
 
-  UvErrorEvent again() override {
-    int rc = uv_timer_again(handle_.handle());
-    return UvErrorEvent { rc, 0 };
+  int again() override {
+    return uv_timer_again(handle_.handle());
   }
 
   void setRepeat(uint64_t repeat) override {
@@ -96,27 +104,17 @@ class TimerImpl : public Timer {
     self->emit(event);
   }
 
-  UvErrorEvent start(uint64_t timeout, uint64_t repeat) override {
-    int rc;
-    rc = uv_timer_init(loop_->get(), handle_.handle());
-    if (rc) {
-      return UvErrorEvent { rc, 0 };
-    }
-    handle_.setData(self_.lock());
-    handle_.attach();
-
-    rc = uv_timer_start(handle_.handle(), timerCallback, timeout, repeat);
-    if (rc) {
-      return UvErrorEvent { rc, 0 };
-    }
-
-    return UvErrorEvent {};
+  int start(uint64_t timeout, uint64_t repeat) override {
+    return uv_timer_start(handle_.handle(), timerCallback, timeout, repeat);
   }
 };
 
-std::shared_ptr<Timer> jcu::unio::Timer::create(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> log) {
-  std::shared_ptr<TimerImpl> instance(new TimerImpl(loop, log));
+std::shared_ptr<Timer> jcu::unio::Timer::create(const BasicParams& basic_params) {
+  std::shared_ptr<TimerImpl> instance(new TimerImpl(basic_params));
   instance->self_ = instance;
+  basic_params.loop->sendQueuedTask([instance]() -> void {
+    instance->init();
+  });
   return instance;
 }
 

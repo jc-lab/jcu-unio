@@ -17,6 +17,8 @@
 #include <unordered_map>
 #include <list>
 
+#include "event.h"
+
 namespace jcu {
 namespace unio {
 
@@ -30,6 +32,9 @@ class Emitter {
   virtual ~Emitter() = default;
 
  protected:
+  bool inited_;
+  InitEvent init_event_;
+
   class BaseHandler {
    public:
     virtual ~BaseHandler() = default;
@@ -75,6 +80,26 @@ class Emitter {
 
   std::unordered_map<size_t, std::unique_ptr<BaseHandler>> handlers_ {};
 
+  void emitInit(InitEvent&& event) {
+    emit(event);
+    inited_ = true;
+    init_event_ = std::move(event);
+  }
+
+  template <class U>
+  Handler<U>* getHandler() {
+    auto& p = handlers_[typeid(U).hash_code()];
+    Handler<U>* q = static_cast<Handler<U>*>(p.get());
+    if (!p) {
+      q = new Handler<U>();
+      p.reset(q);
+    }
+    return q;
+  }
+
+ public:
+  Emitter() : inited_(false) {}
+
   /**
    * emit event
    * @return count
@@ -91,37 +116,55 @@ class Emitter {
     return 0;
   }
 
- public:
   template <typename U>
   void on(std::function<void(U& event, Resource& handle)> callback) {
-    auto& p = handlers_[typeid(U).hash_code()];
-    Handler<U>* q = static_cast<Handler<U>*>(p.get());
-    if (!p) {
-      q = new Handler<U>();
-      p.reset(q);
+    auto q = getHandler<U>();
+    q->on(std::move(callback));
+  }
+
+  template <>
+  void on<InitEvent>(std::function<void(InitEvent& event, Resource& handle)> callback) {
+    if (inited_) {
+      callback(init_event_, dynamic_cast<Resource&>(*this));
+      return ;
     }
+    auto q = getHandler<InitEvent>();
     q->on(std::move(callback));
   }
 
   template <typename U>
   void once(std::function<void(U& event, Resource& handle)> callback) {
-    auto& p = handlers_[typeid(U).hash_code()];
-    Handler<U>* q = static_cast<Handler<U>*>(p.get());
-    if (!p) {
-      q = new Handler<U>();
-      p.reset(q);
+    auto q = getHandler<U>();
+    q->once(std::move(callback));
+  }
+
+  template <>
+  void once<InitEvent>(std::function<void(InitEvent& event, Resource& handle)> callback) {
+    if (inited_) {
+      callback(init_event_, dynamic_cast<Resource&>(*this));
+      return ;
     }
+    auto q = getHandler<InitEvent>();
     q->once(std::move(callback));
   }
 
   template <typename U>
-  void clear() {
+  void off() {
     auto it = handlers_.find(typeid(U).hash_code());
     if (it != handlers_.end()) {
       if (it->second) {
         it->second->clear();
       }
       handlers_.erase(it);
+    }
+  }
+
+  void offAll() {
+    for (auto it = handlers_.begin(); it != handlers_.end(); ) {
+      if (it->second) {
+        it->second->clear();
+      }
+      it = handlers_.erase(it);
     }
   }
 

@@ -16,8 +16,9 @@ namespace jcu {
 namespace unio {
 
 class TCPSocketImpl : public TCPSocket {
- private:
+ public:
   typedef UvCallbackRef<uv_connect_t, SocketConnectEvent, TCPSocketImpl> ConnectCallbackRef;
+  typedef UvCallbackRef<uv_shutdown_t, SocketDisconnectEvent, TCPSocketImpl> ShutdownCallbackRef;
 
   class HandleRef : public UvRef<uv_tcp_t, TCPSocketImpl> {
    public:
@@ -56,41 +57,49 @@ class TCPSocketImpl : public TCPSocket {
     }
   };
 
-  std::shared_ptr<Loop> loop_;
-  std::shared_ptr<Logger> log_;
+  BasicParams basic_params_;
 
   std::weak_ptr<TCPSocketImpl> self_;
 
   HandleRef handle_;
   std::shared_ptr<Buffer> read_buffer_;
-  CompletionManyCallback<SocketReadEvent> read_callback_;
 
   bool connected_;
 
- public:
-  TCPSocketImpl(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> log) :
-      loop_(loop),
-      log_(log),
+  TCPSocketImpl(const BasicParams& basic_params) :
+      basic_params_(basic_params),
       connected_(false)
   {
-    log_->logf(jcu::unio::Logger::kLogTrace, "TCPSocketImpl: construct");
+    basic_params_.logger->logf(jcu::unio::Logger::kLogTrace, "TCPSocketImpl: construct");
   }
 
   ~TCPSocketImpl() {
-    log_->logf(jcu::unio::Logger::kLogTrace, "TCPSocketImpl: destruct");
+    basic_params_.logger->logf(jcu::unio::Logger::kLogTrace, "TCPSocketImpl: destruct");
   }
 
   std::shared_ptr<TCPSocket> shared() const override {
     return self_.lock();
   }
 
+  void init() override {
+    int rc;
+    rc = uv_tcp_init(basic_params_.loop->get(), handle_.handle());
+    if (rc == 0) {
+      handle_.setData(self_.lock());
+      handle_.attach();
+    }
+    InitEvent event { UvErrorEvent::createIfNeeded(rc) };
+    emitInit(std::move(event));
+  }
+
   static void closeCallback(uv_handle_t* handle) {
     auto* ref = HandleRef::from(handle);
     std::shared_ptr<TCPSocketImpl> self = ref->data();
-    ref->close();
-    self->log_->logf(jcu::unio::Logger::kLogTrace, "TCPSocketImpl: closeCallback");
+    self->basic_params_.logger->logf(jcu::unio::Logger::kLogTrace, "TCPSocketImpl: closeCallback");
     CloseEvent event {};
-    self->emit(event);
+    self->emit<CloseEvent>(event);
+    self->offAll();
+    ref->close();
   }
 
   void close() override {
@@ -131,39 +140,36 @@ class TCPSocketImpl : public TCPSocket {
     auto* ref = HandleRef::from(stream);
     auto self = ref->data();
     auto buffer = self->read_buffer_;
-    if (self->read_callback_) {
-      if (nread < 0) {
-        SocketReadEvent event { UvErrorEvent { nread, 0 }, nullptr };
-        self->read_callback_(event, *self);
-        return;
-      }
-      buffer->limit(buffer->position() + nread);
-      {
-        SocketReadEvent event { buffer.get() };
-        self->read_callback_(event, *self);
-      }
-      buffer->clear();
+    if (nread < 0) {
+      SocketReadEvent event { UvErrorEvent::createIfNeeded(nread, 0) };
+      self->emit<SocketReadEvent>(event);
+      return;
     }
+    buffer->limit(buffer->position() + nread);
+    {
+      SocketReadEvent event { buffer.get() };
+      self->emit<SocketReadEvent>(event);
+    }
+    buffer->clear();
   }
 
-  void read(std::shared_ptr<Buffer> buffer, CompletionManyCallback<SocketReadEvent> callback) override {
+  void read(std::shared_ptr<Buffer> buffer) override {
     std::shared_ptr<TCPSocketImpl> self(self_.lock());
     read_buffer_ = buffer;
-    read_callback_ = callback;
-    loop_->sendQueuedTask([self]() -> void {
+    basic_params_.loop->sendQueuedTask([self]() -> void {
       uv_read_start(self->handle_.handle<uv_stream_t>(), allocCallback, readCallback);
     });
   }
 
   void cancelRead() override {
     uv_read_stop(handle_.handle<uv_stream_t>());
-    read_callback_ = nullptr;
     read_buffer_.reset();
   }
 
   static void writeCallback(uv_write_t* req, int status) {
     auto ref = WriteRef::from(req);
-    SocketWriteEvent event { UvErrorEvent { status, 0 } };
+    std::shared_ptr<TCPSocketImpl> self(ref->data());
+    SocketWriteEvent event { UvErrorEvent::createIfNeeded(status, 0) };
     ref->publishAndClose(event);
   }
 
@@ -186,51 +192,51 @@ class TCPSocketImpl : public TCPSocket {
     auto self = ref->data();
     if (status == 0) {
       self->connected_ = true;
-      SocketConnectEvent event {};
-      ref->publishAndClose(event);
-    } else {
-      SocketConnectEvent event { std::make_shared<UvErrorEvent>(status, 0) };
-      ref->publishAndClose(event);
     }
+
+    SocketConnectEvent event { UvErrorEvent::createIfNeeded(status, 0) };
+    ref->publishAndClose(event);
   }
 
   void connect(std::shared_ptr<ConnectParam> connect_param, CompletionOnceCallback<SocketConnectEvent> callback) override {
     std::shared_ptr<TCPSocketImpl> self(self_.lock());
-    loop_->sendQueuedTask([self, connect_param, callback = std::move(callback)]() mutable -> void {
-      int rc;
-      self->handle_.setData(self);
-      rc = uv_tcp_init(self->loop_->get(), self->handle_.handle());
-      if (rc) {
-        SocketConnectEvent event { UvErrorEvent { rc, 0 } };
-        callback(event, *self);
-        return ;
-      }
-      self->handle_.attach();
+    ConnectCallbackRef::create(
+        self,
+        std::move(callback),
+        &uv_tcp_connect, self->handle_.handle(), connect_param->getSockAddr(),
+        connectCallback
+    );
+  }
 
-      ConnectCallbackRef::create(
-          self,
-          std::move(callback),
-          &uv_tcp_connect, self->handle_.handle(), connect_param->getSockAddr(),
-          connectCallback
-      );
-    });
+  static void shutdownCallback(uv_shutdown_t* handle, int status) {
+    auto* ref = ShutdownCallbackRef::from(handle);
+    auto self = ref->data();
+    self->connected_ = false;
+    SocketDisconnectEvent event { UvErrorEvent::createIfNeeded(status, 0) };
+    ref->publishAndClose(event);
   }
 
   void disconnect(CompletionOnceCallback<SocketDisconnectEvent> callback) override {
-    typedef UvCallbackRef<uv_shutdown_t, SocketDisconnectEvent, TCPSocketImpl> CallbackRefImpl;
     std::shared_ptr<TCPSocketImpl> self(self_.lock());
-    loop_->sendQueuedTask([self, callback = std::move(callback)]() mutable -> void {
-      CallbackRefImpl::create(
-          self,
-          std::move(callback),
-          &uv_shutdown, self->handle_.handle<uv_stream_t>(), [](uv_shutdown_t* handle, int status) -> void {
-            auto* ref = CallbackRefImpl::from(handle);
-            auto self = ref->data();
-            self->connected_ = false;
-            ref->publishAndClose(UvErrorEvent {status, 0 });
-          }
-      );
+    ShutdownCallbackRef::create(
+        self,
+        std::move(callback),
+        &uv_shutdown, self->handle_.handle<uv_stream_t>(), shutdownCallback
+    );
+  }
+
+  int bind(std::shared_ptr<BindParam> bind_param) override {
+    return uv_tcp_bind(handle_.handle(), bind_param->getSockAddr(), 0);
+  }
+
+  int listen(int backlog) override {
+    return uv_listen(handle_.handle<uv_stream_t>(), backlog, [](uv_stream_t* server, int status) -> void {
+
     });
+  }
+
+  int accept(std::shared_ptr<StreamSocket> client) override {
+    return UV__EINVAL;
   }
 
   bool isConnected() const override {
@@ -238,14 +244,16 @@ class TCPSocketImpl : public TCPSocket {
   }
 
   static std::shared_ptr<TCPSocketImpl> create(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> log) {
-    auto instance = std::make_shared<TCPSocketImpl>(loop, log);
-    instance->self_ = instance;
-    return std::move(instance);
   }
 };
 
-std::shared_ptr<TCPSocket> TCPSocket::create(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> log) {
-  return std::move(TCPSocketImpl::create(loop, log));
+std::shared_ptr<TCPSocket> TCPSocket::create(const BasicParams& basic_params) {
+  auto instance = std::make_shared<TCPSocketImpl>(basic_params);
+  instance->self_ = instance;
+  basic_params.loop->sendQueuedTask([instance]() -> void {
+    instance->init();
+  });
+  return std::move(instance);
 }
 
 } // namespace unio

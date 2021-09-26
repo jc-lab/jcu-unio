@@ -20,17 +20,13 @@
 namespace jcu {
 namespace unio {
 
-class SocketReadEvent : public BaseEvent {
+class SocketReadEvent : public AbstractEvent {
  protected:
-  UvErrorEvent error_;
   Buffer* buffer_;
 
  public:
-  SocketReadEvent(UvErrorEvent error, Buffer* buffer);
+  SocketReadEvent(std::shared_ptr<ErrorEvent> error, Buffer* buffer = nullptr);
   SocketReadEvent(Buffer* buffer);
-  bool hasError() const override;
-  ErrorEvent &error() override;
-  const ErrorEvent &error() const override;
   Buffer* buffer() {
     return buffer_;
   }
@@ -39,16 +35,10 @@ class SocketReadEvent : public BaseEvent {
   }
 };
 
-class SocketWriteEvent : public BaseEvent {
- protected:
-  UvErrorEvent error_;
-
+class SocketWriteEvent : public AbstractEvent {
  public:
   SocketWriteEvent();
-  SocketWriteEvent(UvErrorEvent error);
-  bool hasError() const override;
-  ErrorEvent &error() override;
-  const ErrorEvent &error() const override;
+  SocketWriteEvent(std::shared_ptr<ErrorEvent> error);
 };
 
 class ConnectParam {
@@ -59,6 +49,16 @@ class ConnectParam {
   ConnectParam() {}
   virtual ~ConnectParam() = default;
   virtual const char* getHostname() const = 0;
+  virtual const struct sockaddr* getSockAddr() const = 0;
+};
+
+class BindParam {
+ private:
+  BindParam(const BindParam&) = delete;
+
+ public:
+  BindParam() {}
+  virtual ~BindParam() = default;
   virtual const struct sockaddr* getSockAddr() const = 0;
 };
 
@@ -91,22 +91,65 @@ class SockAddrConnectParam : public ConnectParam {
   }
 };
 
+template<typename T>
+class SockAddrBindParam : public BindParam {
+ protected:
+  T sockaddr_;
+
+ public:
+  SockAddrBindParam() {
+    std::memset(&sockaddr_, 0, sizeof(sockaddr_));
+  }
+
+  const sockaddr *getSockAddr() const override {
+    return (sockaddr*) &sockaddr_;
+  }
+
+  T *getSockAddr() {
+    return &sockaddr_;
+  }
+};
+
 class Socket : public Handle {
  public:
+  /**
+   * Start reading
+   * When there is data to read, SocketReadEvent is emitted.
+   *
+   * @param buffer read buffer
+   */
   virtual void read(
-      std::shared_ptr<Buffer> buffer,
-      CompletionManyCallback<SocketReadEvent> callback
+      std::shared_ptr<Buffer> buffer
   ) = 0;
+
+  /**
+   * Cancel Read
+   */
   virtual void cancelRead() = 0;
 
   /**
-   * MUST call after the previous write operation is done.
-   * @param buffer
+   * When the write is complete, the callback is called.
+   * If the callback is nullptr,
+   * a SocketWriteEvent is emitted if the write has completed successfully,
+   * or an ErrorEvent if an error has occurred..
+   *
+   * @param buffer data to write.
+   *               The buffer must not be modified until the write is complete.
    * @param callback
    */
   virtual void write(
       std::shared_ptr<Buffer> buffer,
-      CompletionOnceCallback<SocketWriteEvent> callback
+      CompletionOnceCallback<SocketWriteEvent> callback = nullptr
+  ) = 0;
+
+  /**
+   * bind
+   *
+   * @param bind_param
+   * @return uv errno
+   */
+  virtual int bind(
+      std::shared_ptr<BindParam> bind_param
   ) = 0;
 };
 

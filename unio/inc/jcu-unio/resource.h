@@ -14,7 +14,19 @@
 namespace jcu {
 namespace unio {
 
+class Loop;
+class Logger;
+
+struct BasicParams {
+  std::shared_ptr<Loop> loop;
+  std::shared_ptr<Logger> logger;
+  //TODO: Memory Pool
+};
+
 class Resource {
+ protected:
+  BasicParams basic_params_;
+
  public:
   virtual ~Resource() = default;
   virtual void close() = 0;

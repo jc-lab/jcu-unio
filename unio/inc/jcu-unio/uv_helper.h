@@ -144,11 +144,19 @@ class UvCallbackRef : public UvRefBase {
   }
 
   void publish(E event) {
-    fn_(event, *data_);
+    if (fn_) {
+      fn_(event, *data_);
+    } else {
+      if (event.hasError()) {
+        data_->emit<ErrorEvent>(event.error());
+      } else {
+        data_->emit<E>(event);
+      }
+    }
   }
 
   void publishAndClose(E event) {
-    fn_(event, *data_);
+    publish(std::move(event));
     close();
   }
 
@@ -156,8 +164,12 @@ class UvCallbackRef : public UvRefBase {
   bool reset(CompletionCallback<E> fn, F&& f, Args&& ...args) {
     int rc = std::forward<F>(f)(handle(), std::forward<Args>(args)...);
     if (rc) {
-      E event { UvErrorEvent {rc, 0} };
-      fn(event, *data_);
+      E event { UvErrorEvent::createIfNeeded(rc, 0) };
+      if (fn) {
+        fn(event, *data_);
+      } else {
+        data_->emit<ErrorEvent>(event.error());
+      }
       return false;
     }
     setCallback(std::move(fn));
@@ -171,8 +183,12 @@ class UvCallbackRef : public UvRefBase {
     int rc = std::forward<F>(f)(instance->handle(), std::forward<Args>(args)...);
     if (rc) {
       delete instance;
-      E event { UvErrorEvent {rc, 0} };
-      fn(event, *data);
+      E event { UvErrorEvent::createIfNeeded(rc, 0) };
+      if (fn) {
+        fn(event, *data);
+      } else {
+        data->emit<ErrorEvent>(event.error());
+      }
       return nullptr;
     }
     instance->setCallback(std::move(fn));

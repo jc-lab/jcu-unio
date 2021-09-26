@@ -22,7 +22,7 @@ class Logger;
 
 class TCPSocket : public StreamSocket, public SharedObject<TCPSocket> {
  public:
-  static std::shared_ptr<TCPSocket> create(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> log);
+  static std::shared_ptr<TCPSocket> create(const BasicParams& basic_params);
 };
 
 } // namespace unio

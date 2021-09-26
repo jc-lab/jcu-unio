@@ -33,14 +33,41 @@ class SimpleHttpsClient {
   // channelReadComplete
 
   void init() {
-    auto tcp_socket = TCPSocket::create(loop_, log_);
-    socket_ = SSLSocket::create(loop_, log_, ssl_context_);
+    std::shared_ptr<SimpleHttpsClient> self(self_.lock());
+    jcu::unio::BasicParams basic_params { loop_, log_ };
+    auto tcp_socket = TCPSocket::create(basic_params);
+    socket_ = SSLSocket::create(basic_params, ssl_context_);
     socket_->setParent(tcp_socket);
 
     read_buf_ = createFixedSizeBuffer(1024);
     write_buf_ = createFixedSizeBuffer(1024);
-    socket_->once<CloseEvent>([](CloseEvent& event, Resource& handle) -> void {
-      printf("SSLSocket CloseEvent\n");
+    socket_->once<CloseEvent>([](CloseEvent &event, Resource &handle) -> void {
+      fprintf(stderr,"SSLSocket CloseEvent\n");
+    });
+    socket_->on<SocketReadEvent>([self](SocketReadEvent &event, Resource &base_handle) -> void {
+      SSLSocket &handle = dynamic_cast<SSLSocket &>(base_handle);
+
+      if (event.hasError()) {
+        auto &error = event.error();
+        printf("READ ERR: %d %s\n", error.code(), error.what());
+
+        handle.close();
+      } else {
+        std::string text((const char *) event.buffer()->data(), event.buffer()->remaining());
+        printf("READ: %s\n", text.c_str());
+
+        self->loop_->sendQueuedTask([handle = handle.shared()]() -> void {
+          fprintf(stderr, "GO DISCONNECT\n");
+          handle->disconnect([](auto &event, auto &handle) -> void {
+            fprintf(stderr, "DISCONNECTED\n");
+            if (event.hasError()) {
+              fprintf(stderr, "DISCONNECT FAILED: %d: %s\n", event.error().code(), event.error().what());
+            } else {
+              handle.close();
+            }
+          });
+        });
+      }
     });
   }
 
@@ -65,38 +92,24 @@ class SimpleHttpsClient {
     });
   }
 
-  void connect(std::shared_ptr<ConnectParam> connect_param) {
+  void start(std::shared_ptr<ConnectParam> connect_param) {
     std::shared_ptr<SimpleHttpsClient> self(self_.lock());
-    socket_->connect(connect_param, [self](SocketConnectEvent& event, Resource& base_handle) -> void {
-      SSLSocket& handle = dynamic_cast<SSLSocket&>(base_handle);
-
-      if (event.hasError()) {
-        fprintf(stderr, "CONNECT FAILED: %d, %s\n", event.error().code(), event.error().what());
-        handle.close();
-        return ;
-      } else {
-        fprintf(stderr, "CONNECTED\n");
-      }
-
-      handle.read(self->read_buf_, [self](SocketReadEvent& event, Resource& base_handle) -> void {
-        SSLSocket& handle = dynamic_cast<SSLSocket&>(base_handle);
+    socket_->once<jcu::unio::InitEvent>([self, connect_param](InitEvent& event, auto& resource) -> void {
+      auto& socket = dynamic_cast<jcu::unio::SSLSocket&>(resource);
+      socket.connect(connect_param, [self](SocketConnectEvent& event, Resource& base_handle) -> void {
+        SSLSocket &handle = dynamic_cast<SSLSocket &>(base_handle);
 
         if (event.hasError()) {
-          auto& error = event.error();
-          printf("READ ERR: %d %s\n", error.code(), error.what());
-
+          fprintf(stderr, "CONNECT FAILED: %d, %s\n", event.error().code(), event.error().what());
           handle.close();
+          return;
         } else {
-          std::string text((const char *) event.buffer()->data(), event.buffer()->remaining());
-          printf("READ: %s\n", text.c_str());
-
-          handle.disconnect([](auto &event, auto &handle) -> void {
-            printf("DISCONNECTED\n");
-            handle.close();
-          });
+          fprintf(stderr, "CONNECTED\n");
         }
+
+        handle.read(self->read_buf_);
+        self->write("GET / HTTP/1.1\nHost: api.myip.com\n\n");
       });
-      self->write("GET / HTTP/1.1\nHost: api.myip.com\n\n");
     });
   }
 };
@@ -119,7 +132,7 @@ int main() {
   addr_param->setHostname("api.myip.com");
   uv_ip4_addr("172.67.208.45", 443, addr_param->getSockAddr());
 
-  echo_client->connect(addr_param);
+  echo_client->start(addr_param);
 
   loop->init();
 

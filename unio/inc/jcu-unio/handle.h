@@ -20,8 +20,11 @@ namespace unio {
 /**
  * common events
  * - CloseEvent
+ * - InitEvent
  */
 class Handle : public Resource, public Emitter {
+ protected:
+  virtual void init() = 0;
 };
 
 } // namespace unio

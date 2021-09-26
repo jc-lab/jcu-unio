@@ -24,33 +24,33 @@ class Logger;
 
 class TimerEvent {};
 
-class Timer : public Resource, public Emitter, public SharedObject<Timer> {
+class Timer : public Handle, public SharedObject<Timer> {
  public:
-  static std::shared_ptr<Timer> create(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> log);
+  static std::shared_ptr<Timer> create(const BasicParams& basic_params);
 
   template<class _RepTimout, class _PeriodTimeout, class _RepRepeat, class _PeriodRepeat>
-  UvErrorEvent start(
+  int start(
       const std::chrono::duration<_RepTimout, _PeriodTimeout> &timeout,
       const std::chrono::duration<_RepRepeat, _PeriodRepeat> &repeat
   ) {
-    return std::move(start(
+    return start(
         std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count(),
         std::chrono::duration_cast<std::chrono::milliseconds>(repeat).count()
-    ));
+    );
   }
 
   template<class _RepTimout, class _PeriodTimeout>
-  UvErrorEvent start(
+  int start(
       const std::chrono::duration<_RepTimout, _PeriodTimeout> &timeout
   ) {
-    return std::move(start(
+    return start(
         std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count(),
         0
-    ));
+    );
   }
 
-  virtual UvErrorEvent stop() = 0;
-  virtual UvErrorEvent again() = 0;
+  virtual int stop() = 0;
+  virtual int again() = 0;
 
   template<class _RepRepeat, class _PeriodRepeat>
   void setRepeat(const std::chrono::duration<_RepRepeat, _PeriodRepeat> &repeat) {
@@ -63,7 +63,7 @@ class Timer : public Resource, public Emitter, public SharedObject<Timer> {
   virtual std::chrono::milliseconds getDueIn() = 0;
 
  protected:
-  virtual UvErrorEvent start(uint64_t timeout, uint64_t repeat) = 0;
+  virtual int start(uint64_t timeout, uint64_t repeat) = 0;
   virtual void setRepeat(uint64_t repeat) = 0;
 };
 

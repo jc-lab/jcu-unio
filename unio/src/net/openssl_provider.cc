@@ -16,6 +16,8 @@
 #include <jcu-unio/buffer.h>
 #include <jcu-unio/net/openssl_provider.h>
 
+#include <utility>
+
 namespace jcu {
 namespace unio {
 namespace openssl {
@@ -43,8 +45,8 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
   };
 
  private:
+  BasicParams basic_params_;
   std::shared_ptr<OpenSSLContext> ssl_context_;
-  std::shared_ptr<Logger> logger_;
 
   SSLRole role_;
 
@@ -58,14 +60,12 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
   std::shared_ptr<SslErrorEvent> handshake_error_;
 
  public:
-  OpenSSLEngineImpl(std::shared_ptr<OpenSSLContext> ssl_context, SSLRole role) :
-      ssl_context_(ssl_context),
+  OpenSSLEngineImpl(const BasicParams& basic_params, std::shared_ptr<OpenSSLContext> ssl_context, SSLRole role) :
+      basic_params_(basic_params),
+      ssl_context_(std::move(ssl_context)),
       role_(role),
       state_(kStateClosed),
       handshake_error_(nullptr) {
-    logger_ = createDefaultLogger([](Logger::LogLevel level, const std::string &msg) -> void {
-      fprintf(stderr, "%s\n", msg.c_str());
-    });
     err_bio_.reset(BIO_new(BIO_s_mem()));
   }
 
@@ -103,13 +103,14 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
           if (msg_size > 0) {
             message = std::string(msg_ptr, msg_size);
           }
-          logger_->logf(Logger::kLogWarn, "SSL ERROR: %s", message.c_str());
+          basic_params_.logger->logf(Logger::kLogWarn, "SSL ERROR: %s", message.c_str());
         }
+        state_ = kStateError;
+        handshake_error_ = std::make_shared<SslErrorEvent>(rv, message);
 
       case SSL_ERROR_WANT_READ: // 2
       case SSL_ERROR_WANT_WRITE: // 3
       case SSL_ERROR_WANT_X509_LOOKUP:  // 4
-//        tlsProcess();
         break;
       case SSL_ERROR_ZERO_RETURN: // 5
       case SSL_ERROR_SYSCALL: //6
@@ -266,13 +267,16 @@ class OpenSSLEngineImpl : public OpenSSLEngine {
   }
 
   bool shutdown() override {
-    if (state_ != kStateHandshaked) return false;
     int rv = SSL_shutdown(ssl_.get());
     if (handleError(rv)) {
       return false;
     }
     state_ = kStateClosing;
     return true;
+  }
+
+  virtual bool isClosing() const {
+    return state_ == kStateClosing;
   }
 };
 
@@ -301,8 +305,8 @@ class OpenSSLContextImpl : public OpenSSLContext {
     return provider_;
   }
 
-  std::unique_ptr<SSLEngine> createEngine(SSLRole role) const override {
-    return std::make_unique<OpenSSLEngineImpl>(self_.lock(), role);
+  std::unique_ptr<SSLEngine> createEngine(const BasicParams& basic_params, SSLRole role) const override {
+    return std::make_unique<OpenSSLEngineImpl>(basic_params, self_.lock(), role);
   }
 };
 
