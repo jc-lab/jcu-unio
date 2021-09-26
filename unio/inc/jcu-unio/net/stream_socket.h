@@ -28,6 +28,12 @@ class SocketDisconnectEvent : public AbstractEvent {
   SocketDisconnectEvent(std::shared_ptr<ErrorEvent> error);
 };
 
+class SocketListenEvent : public AbstractEvent {
+ public:
+  SocketListenEvent();
+  SocketListenEvent(std::shared_ptr<ErrorEvent> error);
+};
+
 class StreamSocket : public Socket {
  public:
  /**

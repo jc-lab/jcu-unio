@@ -229,21 +229,24 @@ class TCPSocketImpl : public TCPSocket {
     return uv_tcp_bind(handle_.handle(), bind_param->getSockAddr(), 0);
   }
 
-  int listen(int backlog) override {
-    return uv_listen(handle_.handle<uv_stream_t>(), backlog, [](uv_stream_t* server, int status) -> void {
+  static void listenCallback(uv_stream_t* server, int status) {
+    auto ref = HandleRef::from(server);
+    std::shared_ptr<TCPSocketImpl> self(ref->data());
+    SocketListenEvent event { UvErrorEvent::createIfNeeded(status) };
+    self->emit<SocketListenEvent>(event);
+  }
 
-    });
+  int listen(int backlog) override {
+    return uv_listen(handle_.handle<uv_stream_t>(), backlog, listenCallback);
   }
 
   int accept(std::shared_ptr<StreamSocket> client) override {
-    return 0;
+    auto impl = std::dynamic_pointer_cast<TCPSocketImpl>(client);
+    return uv_accept(handle_.handle<uv_stream_t>(), impl->handle_.handle<uv_stream_t>());
   }
 
   bool isConnected() const override {
     return connected_;
-  }
-
-  static std::shared_ptr<TCPSocketImpl> create(std::shared_ptr<Loop> loop, std::shared_ptr<Logger> log) {
   }
 };
 

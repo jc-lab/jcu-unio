@@ -26,5 +26,11 @@ SocketDisconnectEvent::SocketDisconnectEvent() :
 SocketDisconnectEvent::SocketDisconnectEvent(std::shared_ptr<ErrorEvent> error) :
     AbstractEvent(std::move(error)) {}
 
+SocketListenEvent::SocketListenEvent() :
+    AbstractEvent(nullptr) {}
+
+SocketListenEvent::SocketListenEvent(std::shared_ptr<ErrorEvent> error) :
+    AbstractEvent(std::move(error)) {}
+
 } // namespace unio
 } // namespace jcu
