@@ -16,6 +16,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <list>
+#include <mutex>
 
 #include "event.h"
 
@@ -34,6 +35,8 @@ class Emitter {
  protected:
   bool inited_;
   InitEvent init_event_;
+
+  virtual std::mutex& getInitMutex() = 0;
 
   class BaseHandler {
    public:
@@ -80,6 +83,11 @@ class Emitter {
 
   std::unordered_map<size_t, std::unique_ptr<BaseHandler>> handlers_ {};
 
+  /**
+   * The getInitMutex must be locked.
+   *
+   * @param event
+   */
   void emitInit(InitEvent&& event) {
     emit(event);
     inited_ = true;
@@ -162,6 +170,7 @@ class Emitter {
 
 template <>
 inline void Emitter::on<InitEvent>(std::function<void(InitEvent& event, Resource& handle)> callback) {
+  std::unique_lock<std::mutex> lock(getInitMutex());
   if (inited_) {
     callback(init_event_, dynamic_cast<Resource&>(*this));
     return ;
@@ -172,6 +181,7 @@ inline void Emitter::on<InitEvent>(std::function<void(InitEvent& event, Resource
 
 template <>
 inline void Emitter::once<InitEvent>(std::function<void(InitEvent& event, Resource& handle)> callback) {
+  std::unique_lock<std::mutex> lock(getInitMutex());
   if (inited_) {
     callback(init_event_, dynamic_cast<Resource&>(*this));
     return ;

@@ -28,6 +28,9 @@ class Handle : public Resource, public Emitter {
  protected:
   std::mutex init_mtx_;
 
+  std::mutex& getInitMutex() override {
+    return init_mtx_;
+  }
   virtual void _init() = 0;
  public:
   /**
@@ -38,7 +41,9 @@ class Handle : public Resource, public Emitter {
    */
   virtual void init() {
     std::unique_lock<std::mutex> lock(init_mtx_);
-    _init();
+    if (!inited_) {
+      _init();
+    }
   }
 };
 
