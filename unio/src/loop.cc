@@ -43,6 +43,7 @@ Loop::Loop() {
 }
 
 void Loop::init() {
+  std::unique_lock<std::mutex> lock(ctx_->mutex);
   uv_async_init(get(), &ctx_->queue_handle, [](uv_async_t* handle) -> void {
     Loop* self = (Loop*) uv_handle_get_data((uv_handle_t*) handle);
     self->ctx_->processQueuedTask();
