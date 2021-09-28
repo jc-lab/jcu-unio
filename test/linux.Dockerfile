@@ -20,4 +20,4 @@ RUN cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DJCU_UNIO_ENABLE_TESTING=ON -D
 RUN cmake --build . --config Debug --target jcu_unio_coverage
 
 FROM scratch
-COPY --from=builder /work/build/jcu_unio_coverage.xml /
+COPY --from=builder /work/build/ /

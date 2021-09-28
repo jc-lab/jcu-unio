@@ -36,13 +36,14 @@ jobs:
         run: |
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+      - run: ls -al ./output/
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
           # token: ${{ secrets.CODECOV_TOKEN }}
           name: codecov
           env_vars: OS
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           directory: ./output/
           files: ./jcu_unio_coverage.xml
           flags: unittests
