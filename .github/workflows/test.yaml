@@ -47,7 +47,6 @@ jobs:
           directory: ./output/
           files: ./output/jcu_unio_coverage.xml
           flags: unittests
-          path_to_write_report: ./output/codecov_report.txt
           verbose: true
   windows-build:
     runs-on: windows-latest
