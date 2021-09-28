@@ -9,10 +9,13 @@
 
 #include <string>
 #include <atomic>
+#include <thread>
+#include <future>
 
 #include <gtest/gtest.h>
 
 #include <jcu-unio/emitter.h>
+#include <jcu-unio/handle.h>
 
 namespace {
 
@@ -31,6 +34,38 @@ class TestObject : public Resource, public Emitter {
  protected:
   std::mutex &getInitMutex() override {
     return init_mtx_;
+  }
+};
+
+class InitTestObject : public Handle {
+ public:
+  std::mutex init_mtx_;
+  std::thread init_th_;
+
+  InitTestObject() {
+    init_th_ = std::thread([&]() -> void {
+      std::this_thread::sleep_for(std::chrono::milliseconds { 500 });
+      this->init();
+    });
+  }
+
+  ~InitTestObject() {
+    if (init_th_.joinable()) {
+      init_th_.join();
+    }
+  }
+
+  void close() override {
+  }
+
+ protected:
+  std::mutex &getInitMutex() override {
+    return init_mtx_;
+  }
+
+  void _init() override {
+    InitEvent event;
+    emitInit(std::move(event));
   }
 };
 
@@ -235,6 +270,64 @@ TEST_F(EmitterTest, InheritedEventOn) {
   EXPECT_EQ(sobj_b.use_count(), 1);
   EXPECT_EQ(sobj_c.use_count(), 1);
   EXPECT_EQ(sobj_d.use_count(), 1);
+}
+
+TEST_F(EmitterTest, AutoInitTestOnce) {
+  InitTestObject instance;
+  std::atomic_int result(0);
+  std::promise<int> p;
+  std::future<int> future = p.get_future();
+
+  instance.once<jcu::unio::InitEvent>([&](auto& event, auto& resource) -> void {
+    result.fetch_add(0x00000001);
+    p.set_value(1);
+  });
+
+  auto wait_result = future.wait_for(std::chrono::milliseconds { 1000 });
+  EXPECT_EQ(wait_result, std::future_status::ready);
+  EXPECT_EQ(result, 0x00000001);
+}
+
+TEST_F(EmitterTest, AutoInitTestOn) {
+  InitTestObject instance;
+  std::atomic_int result(0);
+  std::promise<int> p;
+  std::future<int> future = p.get_future();
+
+  instance.once<jcu::unio::InitEvent>([&](auto& event, auto& resource) -> void {
+    result.fetch_add(0x00000001);
+    p.set_value(1);
+  });
+
+  auto wait_result = future.wait_for(std::chrono::milliseconds { 1000 });
+  EXPECT_EQ(wait_result, std::future_status::ready);
+  EXPECT_EQ(result, 0x00000001);
+}
+
+TEST_F(EmitterTest, ManuallyInitTestOnce) {
+  InitTestObject instance;
+  std::atomic_int result(0);
+
+  // Order is importance!
+  instance.init();
+  instance.once<jcu::unio::InitEvent>([&](auto& event, auto& resource) -> void {
+    result.fetch_add(0x00000001);
+  });
+
+  EXPECT_EQ(result, 0x00000001);
+}
+
+TEST_F(EmitterTest, ManuallyInitTestOn) {
+  InitTestObject instance;
+  std::atomic_int result(0);
+
+  // Order is importance!
+  instance.init();
+  instance.once<jcu::unio::InitEvent>([&](auto& event, auto& resource) -> void {
+    result.fetch_add(0x00000001);
+  });
+
+  EXPECT_EQ(result, 0x00000001);
 }
 
 }
