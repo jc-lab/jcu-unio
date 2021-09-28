@@ -50,3 +50,31 @@ target_link_libraries(
         OpenSSL::SSL
         OpenSSL::Crypto
 )
+
+if (JCU_UNIO_ENABLE_TESTING)
+    include(GoogleTest)
+    add_executable(
+            jcu_unio_tests
+            ${CMAKE_CURRENT_SOURCE_DIR}/test/unit_test_utils.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/test/unit_test_utils.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/emitter_unittest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/loop_unittest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/timer_unittest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/net/tcp_socket_unittest.cc
+    )
+    target_link_libraries(jcu_unio_tests
+            PUBLIC
+            jcu_unio
+            gtest
+            gtest_main
+            )
+    gtest_discover_tests(jcu_unio_tests)
+    if (JCU_UNIO_ENABLE_COVERAGE)
+        setup_target_for_coverage_gcovr_xml(
+                NAME jcu_unio_coverage
+                DEPENDENCIES jcu_unio_tests
+                EXECUTABLE ctest -j ${PROCESSOR_COUNT}
+                BASE_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        )
+    endif()
+endif()

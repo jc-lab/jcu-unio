@@ -37,8 +37,12 @@ class Loop : public SharedObject<Loop> {
    * It is safe to call it from a loop thread.
    */
   void init();
+
   /**
    * Unnitialization for queued tasks.
+   *
+   * It must be called from a loop thread.
+   * If you need to call it from another thread, use sendQueuedTask
    */
   void uninit();
 
