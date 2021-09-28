@@ -30,7 +30,7 @@ jobs:
           context: .
           file: test/linux.Dockerfile
           cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          cache-to: type=local,mode=max,dest=/tmp/.buildx-cache-new
           outputs: type=local,dest=./output/
       - name: Move cache
         run: |
