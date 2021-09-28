@@ -74,7 +74,8 @@ if (JCU_UNIO_ENABLE_TESTING)
                 NAME jcu_unio_coverage
                 DEPENDENCIES jcu_unio_tests
                 EXECUTABLE ctest -j ${PROCESSOR_COUNT}
-                BASE_DIRECTORY "${CMAKE_SOURCE_DIR}"
+                BASE_DIRECTORY "../"
+                EXCLUDE "test/.*" ".*_unittest\.cc"
         )
     endif()
 endif()
