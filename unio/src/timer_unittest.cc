@@ -38,4 +38,55 @@ TEST_F(TimerTest, TimerLifecycle) {
   EXPECT_EQ(weak_handle.use_count(), 0);
 }
 
+TEST_F(TimerTest, Timeout) {
+  std::promise<int> init_promise;
+  std::future<int> init_future = init_promise.get_future();
+
+  std::promise<int> close_promise;
+  std::future<int> close_future = close_promise.get_future();
+
+  std::promise<int> timeout_promise;
+  std::future<int> timeout_future = timeout_promise.get_future();
+
+  std::weak_ptr<Timer> weak_handle;
+  std::atomic_int result(0);
+
+  do {
+    auto handle = Timer::create(basic_params_);
+    weak_handle = handle;
+    handle->once<CloseEvent>([&](auto& event, auto& resource) -> void {
+      close_promise.set_value(1);
+    });
+    handle->once<TimerEvent>([&](auto& event, auto& resource) -> void {
+      if (result.fetch_add(1) == 0) {
+        timeout_promise.set_value(1);
+      }
+    });
+    handle->on<InitEvent>([&](auto &event, auto &resource) mutable -> void {
+      auto& timer = dynamic_cast<Timer&>(resource);
+      timer.start(std::chrono::milliseconds { 100 });
+      init_promise.set_value(1);
+    });
+  } while (0);
+
+  // waiting for InitEvent
+  EXPECT_EQ(init_future.wait_for(std::chrono::milliseconds{1000}), std::future_status::ready);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds{1000});
+
+  // waiting for InitEvent
+  EXPECT_EQ(timeout_future.wait_for(std::chrono::milliseconds{1000}), std::future_status::ready);
+  EXPECT_EQ(result.load(), 1);
+
+  EXPECT_EQ(weak_handle.use_count(), 1);
+  basic_params_.loop->sendQueuedTask([timer = weak_handle.lock()]() -> void {
+    timer->close();
+  });
+
+  // waiting for CloseEvent
+  EXPECT_EQ(close_future.wait_for(std::chrono::milliseconds{1000}), std::future_status::ready);
+  std::this_thread::sleep_for(std::chrono::milliseconds{100}); // Wait for the callback to complete.
+  EXPECT_EQ(weak_handle.use_count(), 0);
+}
+
 }
