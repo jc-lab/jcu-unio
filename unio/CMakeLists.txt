@@ -60,6 +60,7 @@ if (JCU_UNIO_ENABLE_TESTING)
             ${CMAKE_CURRENT_SOURCE_DIR}/src/emitter_unittest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/src/loop_unittest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/src/timer_unittest.cc
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/buffer_unittest.cc
             ${CMAKE_CURRENT_SOURCE_DIR}/src/net/tcp_socket_unittest.cc
     )
     target_link_libraries(jcu_unio_tests
