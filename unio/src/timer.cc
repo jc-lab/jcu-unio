@@ -32,19 +32,21 @@ class TimerImpl : public Timer {
 
   std::weak_ptr<TimerImpl> self_;
 
-  BasicParams basic_params_;
-
   HandleRef handle_;
 
-  TimerImpl(const BasicParams& basic_params) :
-    basic_params_(basic_params)
+  TimerImpl(const BasicParams& basic_params)
   {
+    basic_params_ = basic_params;
     basic_params_.logger->logf(Logger::kLogTrace, "Timer: construct");
   }
 
   ~TimerImpl()
   {
     basic_params_.logger->logf(Logger::kLogTrace, "Timer: destroy");
+  }
+
+  std::shared_ptr<Resource> sharedAsResource() override {
+    return self_.lock();
   }
 
   std::shared_ptr<Timer> shared() const override {

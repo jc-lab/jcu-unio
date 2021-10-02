@@ -57,8 +57,6 @@ class TCPSocketImpl : public TCPSocket {
     }
   };
 
-  BasicParams basic_params_;
-
   std::weak_ptr<TCPSocketImpl> self_;
 
   HandleRef handle_;
@@ -67,14 +65,18 @@ class TCPSocketImpl : public TCPSocket {
   bool connected_;
 
   TCPSocketImpl(const BasicParams& basic_params) :
-      basic_params_(basic_params),
       connected_(false)
   {
+    basic_params_ = basic_params;
     basic_params_.logger->logf(jcu::unio::Logger::kLogTrace, "TCPSocketImpl: construct");
   }
 
   ~TCPSocketImpl() {
     basic_params_.logger->logf(jcu::unio::Logger::kLogTrace, "TCPSocketImpl: destruct");
+  }
+
+  std::shared_ptr<Resource> sharedAsResource() override {
+    return self_.lock();
   }
 
   std::shared_ptr<TCPSocket> shared() const override {
@@ -140,9 +142,13 @@ class TCPSocketImpl : public TCPSocket {
     auto* ref = HandleRef::from(stream);
     auto self = ref->data();
     auto buffer = self->read_buffer_;
-    if (nread < 0) {
-      SocketReadEvent event { UvErrorEvent::createIfNeeded(nread, 0) };
-      self->emit<SocketReadEvent>(event);
+    if (nread == UV_EOF) {
+      SocketEndEvent event;
+      self->emit(event);
+      return ;
+    } else if (nread < 0) {
+      auto error_event = UvErrorEvent::createIfNeeded(nread, 0);
+      self->emit<ErrorEvent>(*error_event);
       return;
     }
     buffer->limit(buffer->position() + nread);

@@ -38,6 +38,14 @@ class Emitter {
 
   virtual std::mutex& getInitMutex() = 0;
 
+  /**
+   * Implement to call callback in Loop thread.
+   * This is called when the InitEvent callback is registered in the inited state.
+   *
+   * @param callback callback
+   */
+  virtual void invokeInitEventCallback(std::function<void(InitEvent& event, Resource& handle)>&& callback, InitEvent& event) = 0;
+
   class BaseHandler {
    public:
     virtual ~BaseHandler() = default;
@@ -172,7 +180,7 @@ template <>
 inline void Emitter::on<InitEvent>(std::function<void(InitEvent& event, Resource& handle)> callback) {
   std::unique_lock<std::mutex> lock(getInitMutex());
   if (inited_) {
-    callback(init_event_, dynamic_cast<Resource&>(*this));
+    invokeInitEventCallback(std::move(callback), init_event_);
     return ;
   }
   auto q = getHandler<InitEvent>();
@@ -183,7 +191,7 @@ template <>
 inline void Emitter::once<InitEvent>(std::function<void(InitEvent& event, Resource& handle)> callback) {
   std::unique_lock<std::mutex> lock(getInitMutex());
   if (inited_) {
-    callback(init_event_, dynamic_cast<Resource&>(*this));
+    invokeInitEventCallback(std::move(callback), init_event_);
     return ;
   }
   auto q = getHandler<InitEvent>();

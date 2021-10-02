@@ -19,6 +19,8 @@
 namespace jcu {
 namespace unio {
 
+class Loop;
+
 /**
  * common events
  * - CloseEvent
@@ -31,6 +33,9 @@ class Handle : public Resource, public Emitter {
   std::mutex& getInitMutex() override {
     return init_mtx_;
   }
+
+  void invokeInitEventCallback(std::function<void(InitEvent& event, Resource& handle)>&& callback, InitEvent& event) override;
+
   virtual void _init() = 0;
  public:
   /**

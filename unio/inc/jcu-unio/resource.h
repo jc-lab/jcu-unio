@@ -8,8 +8,10 @@
  */
 
 
-#ifndef OPENVPN_CLIENTPP_JCU_UNIO_UNIO_INC_JCU_UNIO_RESOURCE_H_
-#define OPENVPN_CLIENTPP_JCU_UNIO_UNIO_INC_JCU_UNIO_RESOURCE_H_
+#ifndef JCU_UNIO_RESOURCE_H_
+#define JCU_UNIO_RESOURCE_H_
+
+#include <memory>
 
 namespace jcu {
 namespace unio {
@@ -27,6 +29,9 @@ class Resource {
  protected:
   BasicParams basic_params_;
 
+ protected:
+  virtual std::shared_ptr<Resource> sharedAsResource() = 0;
+
  public:
   virtual ~Resource() = default;
   virtual void close() = 0;
@@ -35,4 +40,4 @@ class Resource {
 } // namespace unio
 } // namespace jcu
 
-#endif //OPENVPN_CLIENTPP_JCU_UNIO_UNIO_INC_JCU_UNIO_RESOURCE_H_
+#endif //JCU_UNIO_RESOURCE_H_

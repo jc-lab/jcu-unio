@@ -20,6 +20,8 @@
 namespace jcu {
 namespace unio {
 
+class SocketEndEvent {};
+
 class SocketReadEvent : public AbstractEvent {
  protected:
   Buffer* buffer_;

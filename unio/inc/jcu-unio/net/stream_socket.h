@@ -47,7 +47,7 @@ class StreamSocket : public Socket {
   */
   virtual void connect(
       std::shared_ptr<ConnectParam> connect_param,
-      CompletionOnceCallback<SocketConnectEvent> callback
+      CompletionOnceCallback<SocketConnectEvent> callback = nullptr
   ) = 0;
 
   /**
@@ -59,7 +59,7 @@ class StreamSocket : public Socket {
    * @param callback
    */
   virtual void disconnect(
-      CompletionOnceCallback<SocketDisconnectEvent> callback
+      CompletionOnceCallback<SocketDisconnectEvent> callback = nullptr
   ) = 0;
 
   /**

@@ -21,7 +21,6 @@ class Logger;
 class SSLSocketImpl : public SSLSocket {
  public:
   std::weak_ptr<SSLSocketImpl> self_;
-  BasicParams basic_params_;
 
   std::shared_ptr<jcu::unio::StreamSocket> parent_;
   std::shared_ptr<SSLContext> ssl_context_;
@@ -37,17 +36,21 @@ class SSLSocketImpl : public SSLSocket {
   bool closing_;
 
   SSLSocketImpl(const BasicParams& basic_params, std::shared_ptr<SSLContext> ssl_context) :
-      basic_params_(basic_params),
       ssl_context_(ssl_context),
       handshaked_(false),
       closing_(false),
       connect_event_(nullptr)
   {
+    basic_params_ = basic_params;
     basic_params_.logger->logf(Logger::kLogTrace, "SSLSocketImpl construct");
   }
 
   ~SSLSocketImpl() {
     basic_params_.logger->logf(Logger::kLogTrace, "SSLSocketImpl destruct");
+  }
+
+  std::shared_ptr<Resource> sharedAsResource() override {
+    return self_.lock();
   }
 
   std::shared_ptr<SSLSocket> shared() const override {
