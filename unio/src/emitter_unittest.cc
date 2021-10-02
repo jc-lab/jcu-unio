@@ -307,28 +307,32 @@ TEST_F(EmitterTest, AutoInitTestOn) {
 
 TEST_F(EmitterTest, ManuallyInitTestOnce) {
   std::shared_ptr<TestObject> instance(TestObject::create(basic_params_));
-  std::atomic_int result(0);
+  std::promise<int> p;
+  std::future<int> f = p.get_future();
 
   // Order is importance!
   instance->init();
   instance->once<jcu::unio::InitEvent>([&](auto& event, auto& resource) -> void {
-    result.fetch_add(0x00000001);
+    p.set_value(0x00000001);
   });
 
-  EXPECT_EQ(result, 0x00000001);
+  EXPECT_EQ(f.wait_for(std::chrono::milliseconds { 1000 }), std::future_status::ready);
+  EXPECT_EQ(f.get(), 0x00000001);
 }
 
 TEST_F(EmitterTest, ManuallyInitTestOn) {
   std::shared_ptr<TestObject> instance(TestObject::create(basic_params_));
-  std::atomic_int result(0);
+  std::promise<int> p;
+  std::future<int> f = p.get_future();
 
   // Order is importance!
   instance->init();
   instance->once<jcu::unio::InitEvent>([&](auto& event, auto& resource) -> void {
-    result.fetch_add(0x00000001);
+    p.set_value(0x00000001);
   });
 
-  EXPECT_EQ(result, 0x00000001);
+  EXPECT_EQ(f.wait_for(std::chrono::milliseconds { 1000 }), std::future_status::ready);
+  EXPECT_EQ(f.get(), 0x00000001);
 }
 
 }
