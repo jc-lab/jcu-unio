@@ -17,11 +17,13 @@
 #include <jcu-unio/emitter.h>
 #include <jcu-unio/handle.h>
 
+#include "../test/unit_test_utils.h"
+
 namespace {
 
 using namespace jcu::unio;
 
-class EmitterTest : public ::testing::Test {
+class EmitterTest : public LoopSupportTest {
 };
 
 class TestObject : public Handle {
@@ -30,7 +32,8 @@ class TestObject : public Handle {
   std::mutex init_mtx_;
   std::thread init_th_;
 
-  TestObject() {
+  TestObject(const BasicParams& basic_params) {
+    basic_params_ = basic_params;
     init_th_ = std::thread([&]() -> void {
       std::this_thread::sleep_for(std::chrono::milliseconds { 500 });
       this->init();
@@ -46,8 +49,8 @@ class TestObject : public Handle {
   void close() override {
   }
 
-  static std::shared_ptr<TestObject> create() {
-    std::shared_ptr<TestObject> instance(new TestObject());
+  static std::shared_ptr<TestObject> create(const BasicParams& basic_params) {
+    std::shared_ptr<TestObject> instance(new TestObject(basic_params));
     instance->self_ = instance;
     return std::move(instance);
   }
@@ -82,7 +85,7 @@ class AppleEvent : public AlphaEvent {
 };
 
 TEST_F(EmitterTest, ExactEventOnce) {
-  std::shared_ptr<TestObject> instance(TestObject::create());
+  std::shared_ptr<TestObject> instance(TestObject::create(basic_params_));
   std::atomic_int result(0);
   std::shared_ptr<int> sobj_a(new int(1));
   std::shared_ptr<int> sobj_b(new int(2));
@@ -129,7 +132,7 @@ TEST_F(EmitterTest, ExactEventOnce) {
 }
 
 TEST_F(EmitterTest, ExactEventOn) {
-  std::shared_ptr<TestObject> instance(TestObject::create());
+  std::shared_ptr<TestObject> instance(TestObject::create(basic_params_));
   std::atomic_int result(0);
   std::shared_ptr<int> sobj_a(new int(1));
   std::shared_ptr<int> sobj_b(new int(2));
@@ -186,7 +189,7 @@ TEST_F(EmitterTest, ExactEventOn) {
 }
 
 TEST_F(EmitterTest, InheritedEventOnce) {
-  std::shared_ptr<TestObject> instance(TestObject::create());
+  std::shared_ptr<TestObject> instance(TestObject::create(basic_params_));
   std::atomic_int result(0);
   std::shared_ptr<int> sobj_a(new int(1));
   std::shared_ptr<int> sobj_b(new int(2));
@@ -229,7 +232,7 @@ TEST_F(EmitterTest, InheritedEventOnce) {
 }
 
 TEST_F(EmitterTest, InheritedEventOn) {
-  std::shared_ptr<TestObject> instance(TestObject::create());
+  std::shared_ptr<TestObject> instance(TestObject::create(basic_params_));
   std::atomic_int result(0);
   std::shared_ptr<int> sobj_a(new int(1));
   std::shared_ptr<int> sobj_b(new int(2));
@@ -271,7 +274,7 @@ TEST_F(EmitterTest, InheritedEventOn) {
 }
 
 TEST_F(EmitterTest, AutoInitTestOnce) {
-  std::shared_ptr<TestObject> instance(TestObject::create());
+  std::shared_ptr<TestObject> instance(TestObject::create(basic_params_));
   std::atomic_int result(0);
   std::promise<int> p;
   std::future<int> future = p.get_future();
@@ -287,7 +290,7 @@ TEST_F(EmitterTest, AutoInitTestOnce) {
 }
 
 TEST_F(EmitterTest, AutoInitTestOn) {
-  std::shared_ptr<TestObject> instance(TestObject::create());
+  std::shared_ptr<TestObject> instance(TestObject::create(basic_params_));
   std::atomic_int result(0);
   std::promise<int> p;
   std::future<int> future = p.get_future();
@@ -303,7 +306,7 @@ TEST_F(EmitterTest, AutoInitTestOn) {
 }
 
 TEST_F(EmitterTest, ManuallyInitTestOnce) {
-  std::shared_ptr<TestObject> instance(TestObject::create());
+  std::shared_ptr<TestObject> instance(TestObject::create(basic_params_));
   std::atomic_int result(0);
 
   // Order is importance!
@@ -316,7 +319,7 @@ TEST_F(EmitterTest, ManuallyInitTestOnce) {
 }
 
 TEST_F(EmitterTest, ManuallyInitTestOn) {
-  std::shared_ptr<TestObject> instance(TestObject::create());
+  std::shared_ptr<TestObject> instance(TestObject::create(basic_params_));
   std::atomic_int result(0);
 
   // Order is importance!
