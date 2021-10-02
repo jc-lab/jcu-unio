@@ -23,19 +23,31 @@ jobs:
           path: /tmp/.buildx-cache
           key: "${{ runner.os }}-${{ env.runner_arch }}-buildx-cpp-${{ github.sha }}"
           restore-keys: "${{ runner.os }}-${{ env.runner_arch }}-buildx-cpp-"
+      - run: mkdir -p ./output/
       - name: Build
         uses: docker/build-push-action@v2
         with:
           context: .
           file: test/linux.Dockerfile
-          push: false
-          tags: local/temp:latest
           cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          cache-to: type=local,mode=max,dest=/tmp/.buildx-cache-new
+          outputs: type=local,dest=./output/
       - name: Move cache
         run: |
           rm -rf /tmp/.buildx-cache
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+      - run: ls -al ./output/
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          # token: ${{ secrets.CODECOV_TOKEN }}
+          name: codecov
+          env_vars: OS
+          fail_ci_if_error: false
+          directory: ./output/
+          files: ./output/jcu_unio_coverage.xml
+          flags: unittests
+          verbose: true
   windows-build:
     runs-on: windows-latest
     steps:

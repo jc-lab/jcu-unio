@@ -1,3 +1,6 @@
 include(FetchContent)
+if (JCU_UNIO_ENABLE_TESTING)
+    include(gtest.cmake)
+endif()
 include(uv.cmake)
 include(openssl.cmake)
