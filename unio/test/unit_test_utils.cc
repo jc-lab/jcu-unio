@@ -22,9 +22,11 @@ void LoopSupportTest::SetUp() {
   });
   basic_params_.loop = SharedLoop::create();
   thread_ = std::thread([&]() -> void {
+    fprintf(stderr, "LoopThread: start\n");
     basic_params_.loop->init();
     uv_run(basic_params_.loop->get(), UV_RUN_DEFAULT);
     stopped_.store(true);
+    fprintf(stderr, "LoopThread: stopped\n");
   });
 }
 
