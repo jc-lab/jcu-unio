@@ -24,15 +24,24 @@ struct QueuedTaskResource {
 
 struct LoopContext {
   uv_async_t queue_handle;
-  std::mutex mutex;
+  std::recursive_mutex mutex;
   std::deque<QueuedTaskResource> queue;
 
   void processQueuedTask() {
-    std::unique_lock<std::mutex> lock(mutex);
+    std::lock_guard<std::recursive_mutex> lock(mutex);
     while (!queue.empty()) {
       QueuedTaskResource resource = std::move(queue.front());
       queue.pop_front();
       resource.task();
+    }
+  }
+
+  void addQueuedTask(QueuedTask_t&& task) {
+    std::lock_guard<std::recursive_mutex> lock(mutex);
+    QueuedTaskResource resource { task };
+    queue.emplace_back(std::move(resource));
+    if (queue_handle.type) {
+      int rc = uv_async_send(&queue_handle);
     }
   }
 };
@@ -43,7 +52,7 @@ Loop::Loop() {
 }
 
 void Loop::init() {
-  std::unique_lock<std::mutex> lock(ctx_->mutex);
+  std::lock_guard<std::recursive_mutex> lock(ctx_->mutex);
   uv_async_init(get(), &ctx_->queue_handle, [](uv_async_t* handle) -> void {
     Loop* self = (Loop*) uv_handle_get_data((uv_handle_t*) handle);
     self->ctx_->processQueuedTask();
@@ -57,12 +66,7 @@ void Loop::uninit() {
 }
 
 void Loop::sendQueuedTask(QueuedTask_t&& task) const {
-  std::unique_lock<std::mutex> lock(ctx_->mutex);
-  QueuedTaskResource resource { task };
-  ctx_->queue.emplace_back(std::move(resource));
-  if (ctx_->queue_handle.type) {
-    int rc = uv_async_send(&ctx_->queue_handle);
-  }
+  ctx_->addQueuedTask(std::move(task));
 }
 
 class UnsafeLoopImpl : public UnsafeLoop {
